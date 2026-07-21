@@ -53,7 +53,7 @@ export default function ActivationPanelApp() {
   const [actionType, setActionType] = useState<"new" | "renew">("new");
 
   // Form State
-  const [duration, setDuration] = useState<string>("12");
+  const [duration, setDuration] = useState<string>("99");
   const [packageId, setPackageId] = useState<string>("32615");
   const [note, setNote] = useState<string>("Tomy");
   const [username, setUsername] = useState<string>("");
