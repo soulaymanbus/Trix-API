@@ -5,16 +5,18 @@ import path from "path";
 
 // Initialize Upstash Redis client if credentials exist in environment (Vercel)
 const redis =
-  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+  (process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL) &&
+  (process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN)
     ? new Redis({
-        url: process.env.UPSTASH_REDIS_REST_URL,
-        token: process.env.UPSTASH_REDIS_REST_TOKEN,
+        url: (process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL)!,
+        token: (process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN)!,
       })
     : null;
 
 // Local disk fallback for development
 const DB_DIR = path.join(process.cwd(), "data");
 const DB_FILE = path.join(DB_DIR, "saved_lines.json");
+const KEY_FILE = path.join(DB_DIR, "saved_api_key.json");
 
 function ensureLocalStorage() {
   if (!fs.existsSync(DB_DIR)) {
@@ -31,7 +33,7 @@ async function getCloudLines(): Promise<any[]> {
       const data = await redis.get<any[]>("activation_lines_db");
       return Array.isArray(data) ? data : [];
     } catch (err) {
-      console.error("Upstash Redis fetch error:", err);
+      console.error("Upstash Redis fetch lines error:", err);
     }
   }
 
@@ -51,7 +53,7 @@ async function saveCloudLines(lines: any[]): Promise<void> {
       await redis.set("activation_lines_db", lines);
       return;
     } catch (err) {
-      console.error("Upstash Redis save error:", err);
+      console.error("Upstash Redis save lines error:", err);
     }
   }
 
@@ -60,14 +62,48 @@ async function saveCloudLines(lines: any[]): Promise<void> {
   fs.writeFileSync(DB_FILE, JSON.stringify(lines, null, 2), "utf-8");
 }
 
+async function getCloudApiKey(): Promise<string> {
+  if (redis) {
+    try {
+      const savedKey = await redis.get<string>("activation_api_key");
+      if (savedKey) return savedKey;
+    } catch (err) {
+      console.error("Upstash Redis fetch key error:", err);
+    }
+  }
+
+  ensureLocalStorage();
+  try {
+    if (fs.existsSync(KEY_FILE)) {
+      return fs.readFileSync(KEY_FILE, "utf-8");
+    }
+  } catch {}
+  return "";
+}
+
+async function saveCloudApiKey(key: string): Promise<void> {
+  if (redis) {
+    try {
+      await redis.set("activation_api_key", key);
+      return;
+    } catch (err) {
+      console.error("Upstash Redis save key error:", err);
+    }
+  }
+
+  ensureLocalStorage();
+  fs.writeFileSync(KEY_FILE, key, "utf-8");
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const action = searchParams.get("action");
 
-  // Handle Cloud Storage Fetch Endpoint
+  // Handle Cloud Storage Fetch Endpoints
   if (action === "cloud_get") {
     const lines = await getCloudLines();
-    return NextResponse.json(lines);
+    const savedApiKey = await getCloudApiKey();
+    return NextResponse.json({ lines, apiKey: savedApiKey });
   }
 
   const apiKey = searchParams.get("api_key");
@@ -85,6 +121,7 @@ export async function GET(request: NextRequest) {
       key !== "action" ||
       (value !== "cloud_get" &&
         value !== "cloud_save" &&
+        value !== "cloud_save_key" &&
         value !== "cloud_delete" &&
         value !== "cloud_clear")
     ) {
@@ -125,7 +162,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { action, line, id } = body;
+    const { action, line, id, apiKey } = body;
+
+    if (action === "cloud_save_key" && apiKey !== undefined) {
+      await saveCloudApiKey(apiKey);
+      return NextResponse.json({ status: "true", apiKey });
+    }
 
     if (action === "cloud_save" && line) {
       const current = await getCloudLines();

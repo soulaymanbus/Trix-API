@@ -92,12 +92,16 @@ export default function ActivationPanelApp() {
     try {
       const res = await fetch("/api/activation?action=cloud_get");
       if (res.ok) {
-        const lines = await res.json();
-        if (Array.isArray(lines)) {
-          setSavedLines(lines);
-          localStorage.setItem("trix_saved_lines", JSON.stringify(lines));
-          return;
+        const data = await res.json();
+        if (data.lines && Array.isArray(data.lines)) {
+          setSavedLines(data.lines);
+          localStorage.setItem("trix_saved_lines", JSON.stringify(data.lines));
         }
+        if (data.apiKey) {
+          setApiKey(data.apiKey);
+          localStorage.setItem("activation_api_key", data.apiKey);
+        }
+        return;
       }
     } catch (e) {
       console.error("Cloud fetch error, using local fallback", e);
@@ -127,9 +131,19 @@ export default function ActivationPanelApp() {
     sessionStorage.removeItem("trix_auth");
   };
 
-  const handleApiKeyChange = (val: string) => {
+  const handleApiKeyChange = async (val: string) => {
     setApiKey(val);
     localStorage.setItem("activation_api_key", val);
+
+    try {
+      await fetch("/api/activation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "cloud_save_key", apiKey: val }),
+      });
+    } catch (e) {
+      console.error("Failed to save API key to cloud database", e);
+    }
   };
 
   const deleteSavedLine = async (id: string) => {
