@@ -70,7 +70,7 @@ export default function ActivationPanelApp() {
   const [rawResponse, setRawResponse] = useState<any>(null);
   const [copiedIndex, setCopiedIndex] = useState<string | null>(null);
 
-  // Check login & load saved storage
+  // Check login & load saved cloud storage
   useEffect(() => {
     const sessionAuth = sessionStorage.getItem("trix_auth");
     if (sessionAuth === "true") {
@@ -84,15 +84,32 @@ export default function ActivationPanelApp() {
       setApiKey("YOUR_API_KEY_HERE");
     }
 
+    // Fetch cloud saved lines
+    fetchCloudLines();
+  }, []);
+
+  const fetchCloudLines = async () => {
+    try {
+      const res = await fetch("/api/activation?action=cloud_get");
+      if (res.ok) {
+        const lines = await res.json();
+        if (Array.isArray(lines)) {
+          setSavedLines(lines);
+          localStorage.setItem("trix_saved_lines", JSON.stringify(lines));
+          return;
+        }
+      }
+    } catch (e) {
+      console.error("Cloud fetch error, using local fallback", e);
+    }
+
     const historyData = localStorage.getItem("trix_saved_lines");
     if (historyData) {
       try {
         setSavedLines(JSON.parse(historyData));
-      } catch (e) {
-        console.error("Failed to parse saved lines", e);
-      }
+      } catch (e) {}
     }
-  }, []);
+  };
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,16 +132,36 @@ export default function ActivationPanelApp() {
     localStorage.setItem("activation_api_key", val);
   };
 
-  const deleteSavedLine = (id: string) => {
+  const deleteSavedLine = async (id: string) => {
     const updated = savedLines.filter((line) => line.id !== id);
     setSavedLines(updated);
     localStorage.setItem("trix_saved_lines", JSON.stringify(updated));
+
+    try {
+      await fetch("/api/activation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "cloud_delete", id }),
+      });
+    } catch (e) {
+      console.error("Cloud delete error", e);
+    }
   };
 
-  const clearAllHistory = () => {
-    if (confirm("Are you sure you want to clear all saved history lines?")) {
+  const clearAllHistory = async () => {
+    if (confirm("Are you sure you want to clear all cloud saved history lines?")) {
       setSavedLines([]);
       localStorage.removeItem("trix_saved_lines");
+
+      try {
+        await fetch("/api/activation", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "cloud_clear" }),
+        });
+      } catch (e) {
+        console.error("Cloud clear error", e);
+      }
     }
   };
 
@@ -215,6 +252,17 @@ export default function ActivationPanelApp() {
         const updatedHistory = [newRecord, ...savedLines];
         setSavedLines(updatedHistory);
         localStorage.setItem("trix_saved_lines", JSON.stringify(updatedHistory));
+
+        // Save to Cloud Storage
+        try {
+          await fetch("/api/activation", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "cloud_save", line: newRecord }),
+          });
+        } catch (e) {
+          console.error("Failed to post line to cloud", e);
+        }
       } else {
         setErrorMsg(data?.message || "Failed to execute request.");
       }
