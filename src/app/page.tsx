@@ -24,7 +24,11 @@ import {
   ShieldCheck,
   Search,
   UserPlus,
-  User
+  User,
+  Settings,
+  Package,
+  Plus,
+  Save
 } from "lucide-react";
 import confetti from "canvas-confetti";
 
@@ -44,6 +48,16 @@ interface SavedLine {
   renewBlock?: string;
 }
 
+interface CustomPackage {
+  id: string;
+  name: string;
+}
+
+const DEFAULT_PACKAGES: CustomPackage[] = [
+  { id: "32615", name: "Adult Package" },
+  { id: "32614", name: "No Adult Package" },
+];
+
 export default function ActivationPanelApp() {
   // Auth & Multi-User State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -54,6 +68,7 @@ export default function ActivationPanelApp() {
 
   // Core App State
   const [apiKey, setApiKey] = useState<string>("");
+  const [packages, setPackages] = useState<CustomPackage[]>(DEFAULT_PACKAGES);
   const [actionType, setActionType] = useState<"new" | "renew">("new");
 
   // Form State
@@ -65,8 +80,13 @@ export default function ActivationPanelApp() {
 
   // History & Storage
   const [savedLines, setSavedLines] = useState<SavedLine[]>([]);
-  const [activeTab, setActiveTab] = useState<"create" | "history">("create");
+  const [activeTab, setActiveTab] = useState<"create" | "history" | "settings">("create");
   const [historySearch, setHistorySearch] = useState<string>("");
+
+  // Settings Management State
+  const [newPkgName, setNewPkgName] = useState<string>("");
+  const [newPkgId, setNewPkgId] = useState<string>("");
+  const [settingsSuccess, setSettingsSuccess] = useState<string | null>(null);
 
   // UI Execution State
   const [loading, setLoading] = useState<boolean>(false);
@@ -103,6 +123,13 @@ export default function ActivationPanelApp() {
         } else {
           setApiKey("");
         }
+        if (data.packages && Array.isArray(data.packages) && data.packages.length > 0) {
+          setPackages(data.packages);
+          setPackageId(data.packages[0].id);
+        } else {
+          setPackages(DEFAULT_PACKAGES);
+          setPackageId("32615");
+        }
       }
     } catch (e) {
       console.error("Cloud fetch error for user", uid, e);
@@ -130,6 +157,13 @@ export default function ActivationPanelApp() {
         setCurrentPassword(data.password);
         setApiKey(data.apiKey || "");
         setSavedLines(Array.isArray(data.lines) ? data.lines : []);
+        if (data.packages && Array.isArray(data.packages) && data.packages.length > 0) {
+          setPackages(data.packages);
+          setPackageId(data.packages[0].id);
+        } else {
+          setPackages(DEFAULT_PACKAGES);
+          setPackageId("32615");
+        }
 
         sessionStorage.setItem("trix_auth", "true");
         sessionStorage.setItem("trix_uid", data.uid);
@@ -150,23 +184,59 @@ export default function ActivationPanelApp() {
     setCurrentPassword("");
     setApiKey("");
     setSavedLines([]);
+    setPackages(DEFAULT_PACKAGES);
     sessionStorage.removeItem("trix_auth");
     sessionStorage.removeItem("trix_uid");
     sessionStorage.removeItem("trix_pass");
   };
 
-  const handleApiKeyChange = async (val: string) => {
-    setApiKey(val);
-
+  const saveSettings = async (updatedApiKey: string, updatedPackages: CustomPackage[]) => {
     try {
       await fetch("/api/activation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "cloud_save_key", apiKey: val, userId: currentUid }),
+        body: JSON.stringify({
+          action: "cloud_save_settings",
+          apiKey: updatedApiKey,
+          packages: updatedPackages,
+          userId: currentUid,
+        }),
       });
+      setSettingsSuccess("Settings saved successfully!");
+      setTimeout(() => setSettingsSuccess(null), 3000);
     } catch (e) {
-      console.error("Failed to save user API key", e);
+      console.error("Failed to save settings to cloud", e);
     }
+  };
+
+  const handleApiKeySave = (val: string) => {
+    setApiKey(val);
+    saveSettings(val, packages);
+  };
+
+  const handleAddPackage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPkgName.trim() || !newPkgId.trim()) return;
+
+    const newPkg: CustomPackage = { id: newPkgId.trim(), name: newPkgName.trim() };
+    const updated = [...packages, newPkg];
+    setPackages(updated);
+    if (!packageId) setPackageId(newPkg.id);
+
+    setNewPkgName("");
+    setNewPkgId("");
+    saveSettings(apiKey, updated);
+  };
+
+  const handleDeletePackage = (id: string) => {
+    if (packages.length <= 1) {
+      alert("You must keep at least one package configuration!");
+      return;
+    }
+    const updated = packages.filter((pkg) => pkg.id !== id);
+    setPackages(updated);
+    if (packageId === id) setPackageId(updated[0].id);
+    saveSettings(apiKey, updated);
   };
 
   const deleteSavedLine = async (id: string) => {
@@ -215,7 +285,7 @@ export default function ActivationPanelApp() {
 
   const handleExecute = async () => {
     if (!apiKey.trim()) {
-      setErrorMsg("Please enter your Reseller API Key above.");
+      setErrorMsg("Please configure your Reseller API Key in the Settings page.");
       return;
     }
 
@@ -394,7 +464,6 @@ Expire On: ${expireDateStr}
     setTimeout(() => setCopiedIndex(null), 2000);
   };
 
-  // Filter history by search term
   const filteredHistory = savedLines.filter(
     (item) =>
       item.username.toLowerCase().includes(historySearch.toLowerCase()) ||
@@ -436,7 +505,7 @@ Expire On: ${expireDateStr}
                 />
               </div>
               <p className="text-[11px] text-gray-400 mt-1">
-                💡 Entering a new password creates a separate isolated UID with your own API Key & client database.
+                💡 Entering a new password creates a separate isolated UID with your own API Key & settings.
               </p>
             </div>
 
@@ -493,30 +562,23 @@ Expire On: ${expireDateStr}
           </div>
         </div>
 
-        {/* API Key Input & User Logout */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
-          <div className="flex flex-col gap-1.5 flex-1">
-            <label className="text-xs font-semibold text-amber-400 flex items-center gap-1.5 uppercase tracking-wider">
-              <Key className="w-3.5 h-3.5" /> Your Reseller API Key
-            </label>
-            <div id="api-key-container" className="relative">
-              <input
-                type="text"
-                value={apiKey}
-                onChange={(e) => handleApiKeyChange(e.target.value)}
-                placeholder="Paste your API key..."
-                className="w-full md:w-72 px-4 py-2.5 bg-slate-900/90 text-amber-300 text-sm font-mono rounded-xl border-2 border-amber-500/80 focus:outline-none api-key-highlight transition-all"
-              />
-              <span className="absolute right-3 top-2.5 text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded font-mono border border-amber-500/40">
-                SAVED
-              </span>
-            </div>
-          </div>
+        {/* User Account Controls */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setActiveTab("settings")}
+            className={`px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 border transition-all ${
+              activeTab === "settings"
+                ? "bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-lg shadow-amber-500/10"
+                : "bg-slate-900/60 text-gray-300 border-white/10 hover:border-white/20"
+            }`}
+          >
+            <Settings className="w-4 h-4 text-amber-400" /> Settings & API
+          </button>
 
           <button
             onClick={handleLogout}
             title="Logout User Account"
-            className="self-end sm:self-auto px-4 py-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 rounded-xl transition-all font-medium text-xs flex items-center gap-2"
+            className="px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 rounded-xl transition-all font-medium text-xs flex items-center gap-2"
           >
             <LogOut className="w-4 h-4" /> Switch Account
           </button>
@@ -549,6 +611,18 @@ Expire On: ${expireDateStr}
           <span className="ml-1 px-2 py-0.5 text-xs bg-white/20 rounded-full font-mono">
             {savedLines.length}
           </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("settings")}
+          className={`px-5 py-2.5 rounded-xl font-medium text-sm flex items-center gap-2 transition-all ${
+            activeTab === "settings"
+              ? "bg-amber-600 text-white shadow-lg shadow-amber-500/20"
+              : "bg-slate-900/40 text-gray-400 hover:text-white border border-white/5"
+          }`}
+        >
+          <Settings className="w-4 h-4 text-amber-300" />
+          Settings
         </button>
       </div>
 
@@ -613,52 +687,28 @@ Expire On: ${expireDateStr}
               {actionType === "new" && (
                 <div className="flex flex-col gap-5 animate-in fade-in duration-300">
                   <div className="flex flex-col gap-2">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-gray-300">
-                      Package (Bouquet ID)
+                    <label className="text-xs font-semibold uppercase tracking-wider text-gray-300 flex items-center justify-between">
+                      <span>Package Selection</span>
+                      <button
+                        onClick={() => setActiveTab("settings")}
+                        className="text-[10px] text-amber-400 hover:underline flex items-center gap-1"
+                      >
+                        <Settings className="w-3 h-3" /> Manage Packages
+                      </button>
                     </label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <label
-                        className={`flex flex-col gap-1 p-3.5 rounded-xl border cursor-pointer transition-all ${
-                          packageId === "32615"
-                            ? "bg-purple-600/20 border-purple-500 text-white"
-                            : "bg-slate-900/40 border-white/10 text-gray-400"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="radio"
-                            name="packageId"
-                            value="32615"
-                            checked={packageId === "32615"}
-                            onChange={(e) => setPackageId(e.target.value)}
-                            className="accent-purple-500"
-                          />
-                          <span className="font-semibold text-sm">Adult Package</span>
-                        </div>
-                        <span className="text-[11px] text-purple-300/70 font-mono ml-5">ID: 32615</span>
-                      </label>
 
-                      <label
-                        className={`flex flex-col gap-1 p-3.5 rounded-xl border cursor-pointer transition-all ${
-                          packageId === "32614"
-                            ? "bg-teal-600/20 border-teal-500 text-white"
-                            : "bg-slate-900/40 border-white/10 text-gray-400"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="radio"
-                            name="packageId"
-                            value="32614"
-                            checked={packageId === "32614"}
-                            onChange={(e) => setPackageId(e.target.value)}
-                            className="accent-teal-500"
-                          />
-                          <span className="font-semibold text-sm">No Adult</span>
-                        </div>
-                        <span className="text-[11px] text-teal-300/70 font-mono ml-5">ID: 32614</span>
-                      </label>
-                    </div>
+                    {/* Packages Dropdown / Selector from Settings */}
+                    <select
+                      value={packageId}
+                      onChange={(e) => setPackageId(e.target.value)}
+                      className="w-full px-4 py-3 bg-slate-900/80 border border-white/10 rounded-xl text-white font-medium focus:outline-none focus:border-blue-500"
+                    >
+                      {packages.map((pkg) => (
+                        <option key={pkg.id} value={pkg.id}>
+                          {pkg.name} (ID: {pkg.id})
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="flex flex-col gap-2">
@@ -1056,6 +1106,115 @@ Expire On: ${expireDateStr}
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* TAB 3: SETTINGS PAGE */}
+      {activeTab === "settings" && (
+        <div className="glass-panel p-6 sm:p-8 rounded-2xl flex flex-col gap-8 animate-in fade-in duration-300">
+          <div className="flex items-center justify-between border-b border-white/10 pb-4">
+            <div>
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <Settings className="w-5 h-5 text-amber-400" />
+                Account Settings & API Configuration
+              </h2>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Manage your Reseller API key and IPTV package list for account UID: <strong className="text-amber-300 font-mono">{currentUid}</strong>
+              </p>
+            </div>
+
+            {settingsSuccess && (
+              <div className="px-3.5 py-1.5 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 rounded-xl text-xs font-semibold flex items-center gap-1.5">
+                <Check className="w-4 h-4" /> {settingsSuccess}
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Section 1: Reseller API Key */}
+            <div className="flex flex-col gap-4 bg-slate-900/60 p-6 rounded-2xl border border-white/10">
+              <h3 className="text-sm font-bold text-amber-300 uppercase tracking-wider flex items-center gap-2">
+                <Key className="w-4 h-4 text-amber-400" /> Reseller API Key
+              </h3>
+              <p className="text-xs text-gray-400">
+                Enter your unique Reseller API Key provided by Activation Panel. This key is stored securely in your user database.
+              </p>
+
+              <div className="flex flex-col gap-2 mt-2">
+                <label className="text-xs font-semibold text-gray-300">API Key String</label>
+                <input
+                  type="text"
+                  value={apiKey}
+                  onChange={(e) => handleApiKeySave(e.target.value)}
+                  placeholder="Paste your Reseller API key here..."
+                  className="w-full px-4 py-3 bg-slate-950/90 text-amber-300 text-sm font-mono rounded-xl border-2 border-amber-500/80 focus:outline-none api-key-highlight"
+                />
+              </div>
+            </div>
+
+            {/* Section 2: Manage Packages & IDs */}
+            <div className="flex flex-col gap-4 bg-slate-900/60 p-6 rounded-2xl border border-white/10">
+              <h3 className="text-sm font-bold text-purple-300 uppercase tracking-wider flex items-center gap-2">
+                <Package className="w-4 h-4 text-purple-400" /> IPTV Packages & Bouquet IDs
+              </h3>
+              <p className="text-xs text-gray-400">
+                Add, edit or delete your IPTV package names and bouquet IDs (e.g. Adult: 32615, No Adult: 32614).
+              </p>
+
+              {/* Package List */}
+              <div className="flex flex-col gap-2 my-2">
+                {packages.map((pkg) => (
+                  <div
+                    key={pkg.id}
+                    className="flex items-center justify-between p-3 bg-slate-950/80 rounded-xl border border-white/5 font-mono text-xs"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-white">{pkg.name}</span>
+                      <span className="px-2 py-0.5 bg-purple-500/20 text-purple-300 rounded border border-purple-500/30">
+                        ID: {pkg.id}
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={() => handleDeletePackage(pkg.id)}
+                      className="p-1 text-gray-500 hover:text-red-400 transition-colors"
+                      title="Remove package"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Add New Package Form */}
+              <form onSubmit={handleAddPackage} className="flex flex-col gap-3 pt-3 border-t border-white/10">
+                <span className="text-xs font-semibold text-gray-300">Add New Custom Package</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    value={newPkgName}
+                    onChange={(e) => setNewPkgName(e.target.value)}
+                    placeholder="Package Name (e.g. Sports)"
+                    className="px-3 py-2 bg-slate-950/90 text-xs text-white rounded-xl border border-white/10 focus:outline-none focus:border-purple-500"
+                  />
+                  <input
+                    type="text"
+                    value={newPkgId}
+                    onChange={(e) => setNewPkgId(e.target.value)}
+                    placeholder="Bouquet ID (e.g. 32616)"
+                    className="px-3 py-2 bg-slate-950/90 text-xs text-white rounded-xl border border-white/10 focus:outline-none focus:border-purple-500 font-mono"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shadow-md"
+                >
+                  <Plus className="w-4 h-4" /> Add Package
+                </button>
+              </form>
+            </div>
+          </div>
         </div>
       )}
     </main>

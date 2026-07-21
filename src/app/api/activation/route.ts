@@ -22,24 +22,25 @@ function ensureUserFile(userId: string) {
   }
   const userFile = path.join(DB_DIR, `user_${userId}.json`);
   if (!fs.existsSync(userFile)) {
-    const initialData = { uid: userId, apiKey: "", lines: [] };
+    const initialData = { uid: userId, apiKey: "", packages: [], lines: [] };
     fs.writeFileSync(userFile, JSON.stringify(initialData, null, 2), "utf-8");
   }
   return userFile;
 }
 
 // Read user isolated data
-async function getUserData(userId: string): Promise<{ uid: string; apiKey: string; lines: any[] }> {
-  const defaultData = { uid: userId, apiKey: "", lines: [] };
+async function getUserData(userId: string): Promise<{ uid: string; apiKey: string; packages: any[]; lines: any[] }> {
+  const defaultData = { uid: userId, apiKey: "", packages: [], lines: [] };
   if (!userId) return defaultData;
 
   if (redis) {
     try {
-      const data = await redis.get<{ uid: string; apiKey: string; lines: any[] }>(`user_db:${userId}`);
+      const data = await redis.get<{ uid: string; apiKey: string; packages: any[]; lines: any[] }>(`user_db:${userId}`);
       if (data && typeof data === "object") {
         return {
           uid: userId,
           apiKey: data.apiKey || "",
+          packages: Array.isArray(data.packages) ? data.packages : [],
           lines: Array.isArray(data.lines) ? data.lines : [],
         };
       }
@@ -56,6 +57,7 @@ async function getUserData(userId: string): Promise<{ uid: string; apiKey: strin
     return {
       uid: userId,
       apiKey: parsed.apiKey || "",
+      packages: Array.isArray(parsed.packages) ? parsed.packages : [],
       lines: Array.isArray(parsed.lines) ? parsed.lines : [],
     };
   } catch {
@@ -64,12 +66,13 @@ async function getUserData(userId: string): Promise<{ uid: string; apiKey: strin
 }
 
 // Save user isolated data
-async function saveUserData(userId: string, data: { apiKey?: string; lines?: any[] }): Promise<void> {
+async function saveUserData(userId: string, data: { apiKey?: string; packages?: any[]; lines?: any[] }): Promise<void> {
   if (!userId) return;
   const current = await getUserData(userId);
   const updated = {
     uid: userId,
     apiKey: data.apiKey !== undefined ? data.apiKey : current.apiKey,
+    packages: data.packages !== undefined ? data.packages : current.packages,
     lines: data.lines !== undefined ? data.lines : current.lines,
   };
 
@@ -98,7 +101,6 @@ export async function GET(request: NextRequest) {
     if (!pass.trim()) {
       return NextResponse.json({ status: "false", message: "Password is required" }, { status: 400 });
     }
-    // Generate deterministic User ID based on password name
     const uid = `usr_${pass.trim().toLowerCase().replace(/[^a-z0-9]/g, "_")}`;
     const userData = await getUserData(uid);
     return NextResponse.json({
@@ -106,6 +108,7 @@ export async function GET(request: NextRequest) {
       uid,
       password: pass.trim(),
       apiKey: userData.apiKey,
+      packages: userData.packages,
       lines: userData.lines,
     });
   }
@@ -113,7 +116,7 @@ export async function GET(request: NextRequest) {
   // Handle Multi-Tenant User Data Fetch
   if (action === "cloud_get") {
     const userData = await getUserData(userId);
-    return NextResponse.json({ lines: userData.lines, apiKey: userData.apiKey });
+    return NextResponse.json({ lines: userData.lines, apiKey: userData.apiKey, packages: userData.packages });
   }
 
   const apiKey = searchParams.get("api_key");
@@ -131,7 +134,7 @@ export async function GET(request: NextRequest) {
       key !== "action" ||
       (value !== "cloud_get" &&
         value !== "cloud_save" &&
-        value !== "cloud_save_key" &&
+        value !== "cloud_save_settings" &&
         value !== "cloud_delete" &&
         value !== "cloud_clear" &&
         value !== "auth_login")
@@ -173,12 +176,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { action, line, id, apiKey, userId } = body;
+    const { action, line, id, apiKey, packages, userId } = body;
     const uid = userId || "default_admin";
 
-    if (action === "cloud_save_key" && apiKey !== undefined) {
-      await saveUserData(uid, { apiKey });
-      return NextResponse.json({ status: "true", apiKey });
+    if (action === "cloud_save_settings") {
+      await saveUserData(uid, { apiKey, packages });
+      return NextResponse.json({ status: "true", apiKey, packages });
     }
 
     if (action === "cloud_save" && line) {
