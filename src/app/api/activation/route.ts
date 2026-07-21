@@ -15,95 +15,105 @@ const redis =
 
 // Local disk fallback for development
 const DB_DIR = path.join(process.cwd(), "data");
-const DB_FILE = path.join(DB_DIR, "saved_lines.json");
-const KEY_FILE = path.join(DB_DIR, "saved_api_key.json");
 
-function ensureLocalStorage() {
+function ensureUserFile(userId: string) {
   if (!fs.existsSync(DB_DIR)) {
     fs.mkdirSync(DB_DIR, { recursive: true });
   }
-  if (!fs.existsSync(DB_FILE)) {
-    fs.writeFileSync(DB_FILE, JSON.stringify([]), "utf-8");
+  const userFile = path.join(DB_DIR, `user_${userId}.json`);
+  if (!fs.existsSync(userFile)) {
+    const initialData = { uid: userId, apiKey: "", lines: [] };
+    fs.writeFileSync(userFile, JSON.stringify(initialData, null, 2), "utf-8");
   }
+  return userFile;
 }
 
-async function getCloudLines(): Promise<any[]> {
+// Read user isolated data
+async function getUserData(userId: string): Promise<{ uid: string; apiKey: string; lines: any[] }> {
+  const defaultData = { uid: userId, apiKey: "", lines: [] };
+  if (!userId) return defaultData;
+
   if (redis) {
     try {
-      const data = await redis.get<any[]>("activation_lines_db");
-      return Array.isArray(data) ? data : [];
+      const data = await redis.get<{ uid: string; apiKey: string; lines: any[] }>(`user_db:${userId}`);
+      if (data && typeof data === "object") {
+        return {
+          uid: userId,
+          apiKey: data.apiKey || "",
+          lines: Array.isArray(data.lines) ? data.lines : [],
+        };
+      }
     } catch (err) {
-      console.error("Upstash Redis fetch lines error:", err);
+      console.error(`Upstash Redis fetch error for user ${userId}:`, err);
     }
   }
 
-  // Fallback to local filesystem
-  ensureLocalStorage();
+  // Local filesystem fallback
   try {
-    const raw = fs.readFileSync(DB_FILE, "utf-8");
-    return JSON.parse(raw);
+    const userFile = ensureUserFile(userId);
+    const raw = fs.readFileSync(userFile, "utf-8");
+    const parsed = JSON.parse(raw);
+    return {
+      uid: userId,
+      apiKey: parsed.apiKey || "",
+      lines: Array.isArray(parsed.lines) ? parsed.lines : [],
+    };
   } catch {
-    return [];
+    return defaultData;
   }
 }
 
-async function saveCloudLines(lines: any[]): Promise<void> {
+// Save user isolated data
+async function saveUserData(userId: string, data: { apiKey?: string; lines?: any[] }): Promise<void> {
+  if (!userId) return;
+  const current = await getUserData(userId);
+  const updated = {
+    uid: userId,
+    apiKey: data.apiKey !== undefined ? data.apiKey : current.apiKey,
+    lines: data.lines !== undefined ? data.lines : current.lines,
+  };
+
   if (redis) {
     try {
-      await redis.set("activation_lines_db", lines);
+      await redis.set(`user_db:${userId}`, updated);
       return;
     } catch (err) {
-      console.error("Upstash Redis save lines error:", err);
+      console.error(`Upstash Redis save error for user ${userId}:`, err);
     }
   }
 
-  // Fallback to local filesystem
-  ensureLocalStorage();
-  fs.writeFileSync(DB_FILE, JSON.stringify(lines, null, 2), "utf-8");
-}
-
-async function getCloudApiKey(): Promise<string> {
-  if (redis) {
-    try {
-      const savedKey = await redis.get<string>("activation_api_key");
-      if (savedKey) return savedKey;
-    } catch (err) {
-      console.error("Upstash Redis fetch key error:", err);
-    }
-  }
-
-  ensureLocalStorage();
-  try {
-    if (fs.existsSync(KEY_FILE)) {
-      return fs.readFileSync(KEY_FILE, "utf-8");
-    }
-  } catch {}
-  return "";
-}
-
-async function saveCloudApiKey(key: string): Promise<void> {
-  if (redis) {
-    try {
-      await redis.set("activation_api_key", key);
-      return;
-    } catch (err) {
-      console.error("Upstash Redis save key error:", err);
-    }
-  }
-
-  ensureLocalStorage();
-  fs.writeFileSync(KEY_FILE, key, "utf-8");
+  // Local filesystem fallback
+  const userFile = ensureUserFile(userId);
+  fs.writeFileSync(userFile, JSON.stringify(updated, null, 2), "utf-8");
 }
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const action = searchParams.get("action");
+  const userId = searchParams.get("user_id") || "default_admin";
 
-  // Handle Cloud Storage Fetch Endpoints
+  // Handle User Auth Verification
+  if (action === "auth_login") {
+    const pass = searchParams.get("password") || "";
+    if (!pass.trim()) {
+      return NextResponse.json({ status: "false", message: "Password is required" }, { status: 400 });
+    }
+    // Generate deterministic User ID based on password name
+    const uid = `usr_${pass.trim().toLowerCase().replace(/[^a-z0-9]/g, "_")}`;
+    const userData = await getUserData(uid);
+    return NextResponse.json({
+      status: "true",
+      uid,
+      password: pass.trim(),
+      apiKey: userData.apiKey,
+      lines: userData.lines,
+    });
+  }
+
+  // Handle Multi-Tenant User Data Fetch
   if (action === "cloud_get") {
-    const lines = await getCloudLines();
-    const savedApiKey = await getCloudApiKey();
-    return NextResponse.json({ lines, apiKey: savedApiKey });
+    const userData = await getUserData(userId);
+    return NextResponse.json({ lines: userData.lines, apiKey: userData.apiKey });
   }
 
   const apiKey = searchParams.get("api_key");
@@ -123,7 +133,8 @@ export async function GET(request: NextRequest) {
         value !== "cloud_save" &&
         value !== "cloud_save_key" &&
         value !== "cloud_delete" &&
-        value !== "cloud_clear")
+        value !== "cloud_clear" &&
+        value !== "auth_login")
     ) {
       targetUrl.searchParams.append(key, value);
     }
@@ -162,30 +173,32 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { action, line, id, apiKey } = body;
+    const { action, line, id, apiKey, userId } = body;
+    const uid = userId || "default_admin";
 
     if (action === "cloud_save_key" && apiKey !== undefined) {
-      await saveCloudApiKey(apiKey);
+      await saveUserData(uid, { apiKey });
       return NextResponse.json({ status: "true", apiKey });
     }
 
     if (action === "cloud_save" && line) {
-      const current = await getCloudLines();
-      const filtered = current.filter((item: any) => item.id !== line.id);
-      const updated = [line, ...filtered];
-      await saveCloudLines(updated);
-      return NextResponse.json({ status: "true", lines: updated });
+      const userData = await getUserData(uid);
+      const currentLines = userData.lines;
+      const filtered = currentLines.filter((item: any) => item.id !== line.id);
+      const updatedLines = [line, ...filtered];
+      await saveUserData(uid, { lines: updatedLines });
+      return NextResponse.json({ status: "true", lines: updatedLines });
     }
 
     if (action === "cloud_delete" && id) {
-      const current = await getCloudLines();
-      const updated = current.filter((item: any) => item.id !== id);
-      await saveCloudLines(updated);
-      return NextResponse.json({ status: "true", lines: updated });
+      const userData = await getUserData(uid);
+      const updatedLines = userData.lines.filter((item: any) => item.id !== id);
+      await saveUserData(uid, { lines: updatedLines });
+      return NextResponse.json({ status: "true", lines: updatedLines });
     }
 
     if (action === "cloud_clear") {
-      await saveCloudLines([]);
+      await saveUserData(uid, { lines: [] });
       return NextResponse.json({ status: "true", lines: [] });
     }
 

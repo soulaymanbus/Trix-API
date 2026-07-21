@@ -22,7 +22,9 @@ import {
   Trash2,
   Calendar,
   ShieldCheck,
-  Search
+  Search,
+  UserPlus,
+  User
 } from "lucide-react";
 import confetti from "canvas-confetti";
 
@@ -43,8 +45,10 @@ interface SavedLine {
 }
 
 export default function ActivationPanelApp() {
-  // Auth Password Gate state
+  // Auth & Multi-User State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [currentUid, setCurrentUid] = useState<string>("");
+  const [currentPassword, setCurrentPassword] = useState<string>("");
   const [adminPassInput, setAdminPassInput] = useState<string>("");
   const [authError, setAuthError] = useState<string | null>(null);
 
@@ -70,92 +74,110 @@ export default function ActivationPanelApp() {
   const [rawResponse, setRawResponse] = useState<any>(null);
   const [copiedIndex, setCopiedIndex] = useState<string | null>(null);
 
-  // Check login & load saved cloud storage
+  // Check existing session login
   useEffect(() => {
     const sessionAuth = sessionStorage.getItem("trix_auth");
-    if (sessionAuth === "true") {
+    const sessionUid = sessionStorage.getItem("trix_uid");
+    const sessionPass = sessionStorage.getItem("trix_pass");
+
+    if (sessionAuth === "true" && sessionUid && sessionPass) {
       setIsAuthenticated(true);
+      setCurrentUid(sessionUid);
+      setCurrentPassword(sessionPass);
+      fetchCloudUserData(sessionUid);
     }
-
-    const savedKey = localStorage.getItem("activation_api_key");
-    if (savedKey) {
-      setApiKey(savedKey);
-    } else {
-      setApiKey("YOUR_API_KEY_HERE");
-    }
-
-    // Fetch cloud saved lines
-    fetchCloudLines();
   }, []);
 
-  const fetchCloudLines = async () => {
+  const fetchCloudUserData = async (uid: string) => {
     try {
-      const res = await fetch("/api/activation?action=cloud_get");
+      const res = await fetch(`/api/activation?action=cloud_get&user_id=${uid}`);
       if (res.ok) {
         const data = await res.json();
         if (data.lines && Array.isArray(data.lines)) {
           setSavedLines(data.lines);
-          localStorage.setItem("trix_saved_lines", JSON.stringify(data.lines));
+        } else {
+          setSavedLines([]);
         }
         if (data.apiKey) {
           setApiKey(data.apiKey);
-          localStorage.setItem("activation_api_key", data.apiKey);
+        } else {
+          setApiKey("");
         }
-        return;
       }
     } catch (e) {
-      console.error("Cloud fetch error, using local fallback", e);
-    }
-
-    const historyData = localStorage.getItem("trix_saved_lines");
-    if (historyData) {
-      try {
-        setSavedLines(JSON.parse(historyData));
-      } catch (e) {}
+      console.error("Cloud fetch error for user", uid, e);
     }
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (adminPassInput === "admin999") {
-      setIsAuthenticated(true);
-      sessionStorage.setItem("trix_auth", "true");
-      setAuthError(null);
-    } else {
-      setAuthError("Incorrect password! Access denied.");
+    if (!adminPassInput.trim()) {
+      setAuthError("Please enter a password.");
+      return;
+    }
+
+    setAuthError(null);
+    setLoading(true);
+
+    try {
+      const pass = adminPassInput.trim();
+      const res = await fetch(`/api/activation?action=auth_login&password=${encodeURIComponent(pass)}`);
+      const data = await res.json();
+
+      if (res.ok && data.status === "true") {
+        setIsAuthenticated(true);
+        setCurrentUid(data.uid);
+        setCurrentPassword(data.password);
+        setApiKey(data.apiKey || "");
+        setSavedLines(Array.isArray(data.lines) ? data.lines : []);
+
+        sessionStorage.setItem("trix_auth", "true");
+        sessionStorage.setItem("trix_uid", data.uid);
+        sessionStorage.setItem("trix_pass", data.password);
+      } else {
+        setAuthError(data.message || "Login failed.");
+      }
+    } catch (err: any) {
+      setAuthError(err.message || "Failed to authenticate.");
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleLogout = () => {
     setIsAuthenticated(false);
+    setCurrentUid("");
+    setCurrentPassword("");
+    setApiKey("");
+    setSavedLines([]);
     sessionStorage.removeItem("trix_auth");
+    sessionStorage.removeItem("trix_uid");
+    sessionStorage.removeItem("trix_pass");
   };
 
   const handleApiKeyChange = async (val: string) => {
     setApiKey(val);
-    localStorage.setItem("activation_api_key", val);
 
     try {
       await fetch("/api/activation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "cloud_save_key", apiKey: val }),
+        body: JSON.stringify({ action: "cloud_save_key", apiKey: val, userId: currentUid }),
       });
     } catch (e) {
-      console.error("Failed to save API key to cloud database", e);
+      console.error("Failed to save user API key", e);
     }
   };
 
   const deleteSavedLine = async (id: string) => {
     const updated = savedLines.filter((line) => line.id !== id);
     setSavedLines(updated);
-    localStorage.setItem("trix_saved_lines", JSON.stringify(updated));
 
     try {
       await fetch("/api/activation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "cloud_delete", id }),
+        body: JSON.stringify({ action: "cloud_delete", id, userId: currentUid }),
       });
     } catch (e) {
       console.error("Cloud delete error", e);
@@ -163,15 +185,14 @@ export default function ActivationPanelApp() {
   };
 
   const clearAllHistory = async () => {
-    if (confirm("Are you sure you want to clear all cloud saved history lines?")) {
+    if (confirm("Are you sure you want to clear all your cloud saved history lines?")) {
       setSavedLines([]);
-      localStorage.removeItem("trix_saved_lines");
 
       try {
         await fetch("/api/activation", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "cloud_clear" }),
+          body: JSON.stringify({ action: "cloud_clear", userId: currentUid }),
         });
       } catch (e) {
         console.error("Cloud clear error", e);
@@ -194,7 +215,7 @@ export default function ActivationPanelApp() {
 
   const handleExecute = async () => {
     if (!apiKey.trim()) {
-      setErrorMsg("Please enter a valid Reseller API Key.");
+      setErrorMsg("Please enter your Reseller API Key above.");
       return;
     }
 
@@ -230,7 +251,7 @@ export default function ActivationPanelApp() {
           origin: { y: 0.7 }
         });
 
-        // Save generated line automatically into history under admin user session
+        // Save generated line automatically into current user's isolated history
         const resObj = Array.isArray(data) ? data[0] : data;
         const creds = extractCredentials(resObj?.url);
         const uName = resObj?.username || creds.username || username;
@@ -265,14 +286,13 @@ export default function ActivationPanelApp() {
 
         const updatedHistory = [newRecord, ...savedLines];
         setSavedLines(updatedHistory);
-        localStorage.setItem("trix_saved_lines", JSON.stringify(updatedHistory));
 
-        // Save to Cloud Storage
+        // Post line to current user's Cloud Storage
         try {
           await fetch("/api/activation", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "cloud_save", line: newRecord }),
+            body: JSON.stringify({ action: "cloud_save", line: newRecord, userId: currentUid }),
           });
         } catch (e) {
           console.error("Failed to post line to cloud", e);
@@ -382,7 +402,7 @@ Expire On: ${expireDateStr}
       item.userId.toLowerCase().includes(historySearch.toLowerCase())
   );
 
-  // Render Password Lock Screen if not logged in
+  // Multi-User Login & Registration Lock Screen
   if (!isAuthenticated) {
     return (
       <main className="min-h-screen flex items-center justify-center p-4">
@@ -391,27 +411,33 @@ Expire On: ${expireDateStr}
           
           <div className="flex flex-col items-center text-center gap-3">
             <div className="p-4 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl shadow-lg shadow-blue-500/30 text-white">
-              <Lock className="w-8 h-8" />
+              <UserPlus className="w-8 h-8" />
             </div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">Protected Panel Access</h1>
+            <h1 className="text-2xl font-bold text-white tracking-tight">Multi-User Activation Panel</h1>
             <p className="text-xs text-gray-400">
-              Please enter your administrator password to unlock tools & line history.
+              Enter any password to sign in or create a brand new isolated user account!
             </p>
           </div>
 
           <form onSubmit={handleLogin} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                Admin Password
+              <label className="text-xs font-semibold text-gray-300 uppercase tracking-wider flex items-center justify-between">
+                <span>Account Password</span>
+                <span className="text-[10px] text-blue-400 font-normal">Creates account automatically</span>
               </label>
-              <input
-                type="password"
-                value={adminPassInput}
-                onChange={(e) => setAdminPassInput(e.target.value)}
-                placeholder="Enter password..."
-                className="w-full px-4 py-3 bg-slate-900/90 text-white rounded-xl border border-white/10 focus:outline-none focus:border-blue-500 text-sm font-mono"
-                autoFocus
-              />
+              <div className="relative">
+                <input
+                  type="password"
+                  value={adminPassInput}
+                  onChange={(e) => setAdminPassInput(e.target.value)}
+                  placeholder="Enter or create password..."
+                  className="w-full px-4 py-3 bg-slate-900/90 text-white rounded-xl border border-white/10 focus:outline-none focus:border-blue-500 text-sm font-mono"
+                  autoFocus
+                />
+              </div>
+              <p className="text-[11px] text-gray-400 mt-1">
+                💡 Entering a new password creates a separate isolated UID with your own API Key & client database.
+              </p>
             </div>
 
             {authError && (
@@ -423,9 +449,11 @@ Expire On: ${expireDateStr}
 
             <button
               type="submit"
+              disabled={loading}
               className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-blue-500/25 transition-all active:scale-95 flex items-center justify-center gap-2"
             >
-              <ShieldCheck className="w-5 h-5" /> Unlock Application
+              {loading ? <RefreshCw className="w-5 h-5 animate-spin" /> : <ShieldCheck className="w-5 h-5" />}
+              <span>Sign In / Create Account</span>
             </button>
           </form>
         </div>
@@ -455,12 +483,12 @@ Expire On: ${expireDateStr}
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
               Activation Panel Manager
-              <span className="px-2.5 py-0.5 text-xs bg-blue-500/20 text-blue-300 rounded-full border border-blue-500/30 font-medium">
-                Admin Authorized
+              <span className="px-2.5 py-0.5 text-xs bg-purple-500/20 text-purple-300 rounded-full border border-purple-500/30 font-mono">
+                UID: {currentUid}
               </span>
             </h1>
-            <p className="text-xs text-gray-400 mt-1">
-              Create & Renew IPTV M3U subscriptions. All lines saved to history.
+            <p className="text-xs text-gray-400 mt-1 flex items-center gap-1.5">
+              <User className="w-3.5 h-3.5 text-emerald-400" /> Account: <strong className="text-white">{currentPassword}</strong> (Isolated Cloud Database)
             </p>
           </div>
         </div>
@@ -469,14 +497,14 @@ Expire On: ${expireDateStr}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
           <div className="flex flex-col gap-1.5 flex-1">
             <label className="text-xs font-semibold text-amber-400 flex items-center gap-1.5 uppercase tracking-wider">
-              <Key className="w-3.5 h-3.5" /> Reseller API Key
+              <Key className="w-3.5 h-3.5" /> Your Reseller API Key
             </label>
             <div id="api-key-container" className="relative">
               <input
                 type="text"
                 value={apiKey}
                 onChange={(e) => handleApiKeyChange(e.target.value)}
-                placeholder="Paste API key..."
+                placeholder="Paste your API key..."
                 className="w-full md:w-72 px-4 py-2.5 bg-slate-900/90 text-amber-300 text-sm font-mono rounded-xl border-2 border-amber-500/80 focus:outline-none api-key-highlight transition-all"
               />
               <span className="absolute right-3 top-2.5 text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded font-mono border border-amber-500/40">
@@ -487,10 +515,10 @@ Expire On: ${expireDateStr}
 
           <button
             onClick={handleLogout}
-            title="Logout Admin"
-            className="self-end sm:self-auto p-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 rounded-xl transition-all"
+            title="Logout User Account"
+            className="self-end sm:self-auto px-4 py-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 rounded-xl transition-all font-medium text-xs flex items-center gap-2"
           >
-            <LogOut className="w-5 h-5" />
+            <LogOut className="w-4 h-4" /> Switch Account
           </button>
         </div>
       </header>
@@ -517,7 +545,7 @@ Expire On: ${expireDateStr}
           }`}
         >
           <History className="w-4 h-4" />
-          Saved History Lines
+          My Saved Lines
           <span className="ml-1 px-2 py-0.5 text-xs bg-white/20 rounded-full font-mono">
             {savedLines.length}
           </span>
@@ -642,11 +670,11 @@ Expire On: ${expireDateStr}
                       onChange={(e) => setDuration(e.target.value)}
                       className="w-full px-4 py-3 bg-slate-900/80 border border-white/10 rounded-xl text-white font-medium focus:outline-none focus:border-blue-500"
                     >
+                      <option value="99">Demo (1 Ticket) - Default</option>
                       <option value="1">1 Month</option>
                       <option value="3">3 Months</option>
                       <option value="6">6 Months</option>
                       <option value="12">12 Months (1 Year)</option>
-                      <option value="99">Demo (1 Ticket)</option>
                     </select>
                   </div>
 
@@ -675,7 +703,7 @@ Expire On: ${expireDateStr}
                       </label>
                       {savedLines.length > 0 && (
                         <span className="text-[11px] text-emerald-400 font-mono">
-                          {savedLines.length} Saved User{savedLines.length > 1 ? "s" : ""} Available
+                          {savedLines.length} Saved User{savedLines.length > 1 ? "s" : ""}
                         </span>
                       )}
                     </div>
@@ -692,7 +720,7 @@ Expire On: ${expireDateStr}
                         }}
                         className="w-full px-4 py-2.5 bg-emerald-950/40 border border-emerald-500/30 rounded-xl text-emerald-300 text-xs font-mono mb-1 focus:outline-none"
                       >
-                        <option value="">-- Quick Auto-fill from Saved History --</option>
+                        <option value="">-- Quick Auto-fill from My History --</option>
                         {savedLines.map((item) => (
                           <option key={item.id} value={item.id}>
                             👤 {item.username} ({item.note || "No Note"}) - Exp: {item.expireDate}
@@ -779,7 +807,7 @@ Expire On: ${expireDateStr}
                   <Code2 className="w-5 h-5 text-purple-400" />
                   Formatted Output Blocks
                 </h2>
-                <span className="text-xs text-gray-400 font-mono">Auto-saved to history</span>
+                <span className="text-xs text-gray-400 font-mono">Saved to UID: {currentUid}</span>
               </div>
 
               {!currentFormattedOutput ? (
@@ -888,10 +916,10 @@ Expire On: ${expireDateStr}
             <div>
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
                 <History className="w-5 h-5 text-purple-400" />
-                Saved Lines History
+                My Saved Lines History
               </h2>
               <p className="text-xs text-gray-400 mt-0.5">
-                All subscriptions created or renewed by admin are automatically stored here.
+                Isolated database for user UID: <strong className="text-purple-300 font-mono">{currentUid}</strong>
               </p>
             </div>
 
@@ -921,9 +949,9 @@ Expire On: ${expireDateStr}
           {filteredHistory.length === 0 ? (
             <div className="py-16 text-center text-gray-500 flex flex-col items-center justify-center gap-2">
               <FileText className="w-10 h-10 text-gray-600" />
-              <p className="text-sm font-medium">No saved lines found</p>
+              <p className="text-sm font-medium">No saved lines found for your user account</p>
               <p className="text-xs text-gray-500">
-                Created lines will be listed here automatically with copy shortcuts.
+                Subscriptions you generate will be saved specifically under your isolated UID.
               </p>
             </div>
           ) : (
