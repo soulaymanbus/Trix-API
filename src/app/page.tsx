@@ -284,6 +284,51 @@ export default function ActivationPanelApp() {
     }
   };
 
+  const parseExpireDate = (rawExpire: any, durationMonths: string, previousExpire?: string): string => {
+    if (rawExpire) {
+      // 1. Numeric timestamp (seconds vs milliseconds)
+      const num = Number(rawExpire);
+      if (!isNaN(num) && num > 0) {
+        const ms = num < 100000000000 ? num * 1000 : num;
+        const d = new Date(ms);
+        if (!isNaN(d.getTime())) {
+          return d.toISOString().split("T")[0];
+        }
+      }
+      // 2. Date string like "2027-07-22 10:46:00" or "2027-07-22"
+      if (typeof rawExpire === "string") {
+        const cleaned = rawExpire.trim().split(" ")[0];
+        if (/^\d{4}-\d{2}-\d{2}$/.test(cleaned)) {
+          return cleaned;
+        }
+        const d = new Date(rawExpire);
+        if (!isNaN(d.getTime())) {
+          return d.toISOString().split("T")[0];
+        }
+      }
+    }
+
+    // 3. Fallback: calculate date by adding durationMonths to previous expire date or today
+    let baseDate = new Date();
+    if (previousExpire) {
+      const cleanedPrev = previousExpire.trim().split(" ")[0];
+      if (/^\d{4}-\d{2}-\d{2}$/.test(cleanedPrev)) {
+        const prevD = new Date(cleanedPrev);
+        if (!isNaN(prevD.getTime()) && prevD.getTime() > Date.now()) {
+          baseDate = prevD;
+        }
+      }
+    }
+
+    const months = parseInt(durationMonths) || 1;
+    if (months >= 12) {
+      baseDate.setFullYear(baseDate.getFullYear() + Math.floor(months / 12));
+    } else {
+      baseDate.setMonth(baseDate.getMonth() + months);
+    }
+    return baseDate.toISOString().split("T")[0];
+  };
+
   const extractCredentials = (urlStr?: string) => {
     if (!urlStr) return { username: "", password: "", host: `http://line.${brandDomain}` };
     try {
@@ -348,42 +393,48 @@ export default function ActivationPanelApp() {
         // Save generated line automatically into current user's isolated history
         const resObj = Array.isArray(data) ? data[0] : data;
         const creds = extractCredentials(resObj?.url);
-        const uName = resObj?.username || creds.username || username;
-        const pWord = resObj?.password || creds.password || password;
+
+        // Find matching line in history if renewing to preserve original userId, note, and expireDate
+        const targetSearchUser = username.trim() || resObj?.username || creds.username;
+        const matchedLine = savedLines.find(
+          (item) => item.username.toLowerCase() === targetSearchUser.toLowerCase()
+        );
+
+        const uName = resObj?.username || creds.username || username.trim() || matchedLine?.username || "";
+        const pWord = resObj?.password || creds.password || password.trim() || matchedLine?.password || "";
         
         // Update state parameters so UI inputs populate with created line details
         if (uName) setUsername(uName);
         if (pWord) setPassword(pWord);
 
-        const uId = resObj?.user_id || `ID-${Math.floor(1000000 + Math.random() * 9000000)}`;
+        const uId = resObj?.user_id || resObj?.id || matchedLine?.userId || `ID-${Math.floor(1000000 + Math.random() * 9000000)}`;
 
-        const defaultExpire = new Date();
-        if (parseInt(duration) >= 12) {
-          defaultExpire.setFullYear(defaultExpire.getFullYear() + 1);
-        } else {
-          defaultExpire.setMonth(defaultExpire.getMonth() + parseInt(duration));
-        }
-        const expireDateStr = resObj?.expire || defaultExpire.toISOString().split("T")[0];
+        const rawApiExpire = resObj?.expire || resObj?.exp_date || resObj?.expire_date || resObj?.date_expire;
+        const expireDateStr = parseExpireDate(rawApiExpire, duration, matchedLine?.expireDate);
+        const itemNote = resObj?.note || matchedLine?.note || note || "Tomy";
 
         const formattedOutputs = formatOutputData(data, actionType, uName, pWord, uId, expireDateStr);
 
         const newRecord: SavedLine = {
-          id: `line_${Date.now()}`,
+          id: matchedLine ? matchedLine.id : `line_${Date.now()}`,
           type: actionType,
           userId: uId,
           username: uName,
           password: pWord,
           expireDate: expireDateStr,
-          note: note || "Tomy",
+          note: itemNote,
           packageId: packageId,
           duration: duration,
           createdTime: new Date().toLocaleString(),
-          block1: formattedOutputs.block1,
-          block2: formattedOutputs.block2,
-          renewBlock: formattedOutputs.renewBlock,
+          block1: actionType === "new" ? formattedOutputs.block1 : (matchedLine?.block1 || ""),
+          block2: actionType === "new" ? formattedOutputs.block2 : (matchedLine?.block2 || ""),
+          renewBlock: actionType === "renew" ? formattedOutputs.renewBlock : (matchedLine?.renewBlock || ""),
         };
 
-        const updatedHistory = [newRecord, ...savedLines];
+        const filteredHistory = savedLines.filter(
+          (item) => item.username.toLowerCase() !== uName.toLowerCase()
+        );
+        const updatedHistory = [newRecord, ...filteredHistory];
         setSavedLines(updatedHistory);
 
         // Post line to current user's Cloud Storage
@@ -418,10 +469,18 @@ export default function ActivationPanelApp() {
     const isSuccess = resObj?.status === "true" || resObj?.status === true;
 
     const creds = extractCredentials(resObj?.url);
-    const uName = resObj?.username || creds.username || uNameParam || username || "";
-    const pWord = resObj?.password || creds.password || pWordParam || password || "";
-    const uId = resObj?.user_id || uIdParam || `ID-${Math.floor(1000000 + Math.random() * 9000000)}`;
-    const expireDateStr = resObj?.expire || expireDateParam || new Date().toISOString().split("T")[0];
+
+    const targetUser = resObj?.username || creds.username || uNameParam || username || "";
+    const matchedLine = savedLines.find(
+      (item) => item.username.toLowerCase() === targetUser.toLowerCase()
+    );
+
+    const uName = targetUser || matchedLine?.username || "";
+    const pWord = resObj?.password || creds.password || pWordParam || password || matchedLine?.password || "";
+    const uId = resObj?.user_id || resObj?.id || uIdParam || matchedLine?.userId || `ID-${Math.floor(1000000 + Math.random() * 9000000)}`;
+
+    const rawApiExpire = resObj?.expire || resObj?.exp_date || resObj?.expire_date || resObj?.date_expire;
+    const expireDateStr = parseExpireDate(rawApiExpire, duration, expireDateParam || matchedLine?.expireDate);
 
     if (act === "new") {
       const block1 = `✅ Add M3U successful
