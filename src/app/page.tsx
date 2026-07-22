@@ -320,6 +320,16 @@ export default function ActivationPanelApp() {
           params.append("note", note.trim());
         }
       } else {
+        if (!username.trim() || !password.trim()) {
+          setErrorMsg("Please enter both Username and Password to execute a line renewal.");
+          setLoading(false);
+          return;
+        }
+        if (duration === "99") {
+          setErrorMsg("Invalid renewal duration. Demo duration (sub=99) cannot be used for renewing a line. Please select 1, 3, 6, or 12 months.");
+          setLoading(false);
+          return;
+        }
         params.append("username", username.trim());
         params.append("password", password.trim());
       }
@@ -471,8 +481,9 @@ http://line.${brandDomain}/get.php?username=${uName}&password=${pWord}&type=m3u_
 
       return { block1, block2, renewBlock: "" };
     } else {
-      const renewBlock = `Statu: ${isSuccess ? "true" : "false"}
-♻️ Line M3U renew successful
+      const msg = resObj?.message || (isSuccess ? "Line M3U renew successful" : "Line renew failed");
+      const renewBlock = `Status: ${isSuccess ? "true" : "false"}
+♻️ ${msg}
 User Id: ${uId}
 Expire On: ${expireDateStr}
 ------------------------------
@@ -670,13 +681,20 @@ Expire On: ${expireDateStr}
                       ? "bg-blue-600/20 border-blue-500 text-white font-medium shadow-lg shadow-blue-500/10"
                       : "bg-slate-900/40 border-white/10 text-gray-400 hover:border-white/20"
                   }`}
+                  onClick={() => {
+                    setActionType("new");
+                    if (duration !== "99") setDuration("99");
+                  }}
                 >
                   <input
                     type="radio"
                     name="actionType"
                     value="new"
                     checked={actionType === "new"}
-                    onChange={() => setActionType("new")}
+                    onChange={() => {
+                      setActionType("new");
+                      if (duration !== "99") setDuration("99");
+                    }}
                     className="hidden"
                   />
                   <PlusCircle className={`w-5 h-5 ${actionType === "new" ? "text-blue-400" : "text-gray-500"}`} />
@@ -689,13 +707,20 @@ Expire On: ${expireDateStr}
                       ? "bg-emerald-600/20 border-emerald-500 text-white font-medium shadow-lg shadow-emerald-500/10"
                       : "bg-slate-900/40 border-white/10 text-gray-400 hover:border-white/20"
                   }`}
+                  onClick={() => {
+                    setActionType("renew");
+                    if (duration === "99") setDuration("12");
+                  }}
                 >
                   <input
                     type="radio"
                     name="actionType"
                     value="renew"
                     checked={actionType === "renew"}
-                    onChange={() => setActionType("renew")}
+                    onChange={() => {
+                      setActionType("renew");
+                      if (duration === "99") setDuration("12");
+                    }}
                     className="hidden"
                   />
                   <RefreshCw className={`w-5 h-5 ${actionType === "renew" ? "text-emerald-400" : "text-gray-500"}`} />
