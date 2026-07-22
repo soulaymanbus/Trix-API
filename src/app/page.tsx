@@ -115,7 +115,7 @@ export default function ActivationPanelApp() {
       if (res.ok) {
         const data = await res.json();
         if (data.lines && Array.isArray(data.lines)) {
-          setSavedLines(data.lines);
+          setSavedLines(getSortedLines(data.lines));
         } else {
           setSavedLines([]);
         }
@@ -163,7 +163,7 @@ export default function ActivationPanelApp() {
         setCurrentPassword(data.password);
         setApiKey(data.apiKey || "");
         setBrandDomain(data.brandDomain || "yourhost.tld");
-        setSavedLines(Array.isArray(data.lines) ? data.lines : []);
+        setSavedLines(getSortedLines(Array.isArray(data.lines) ? data.lines : []));
         if (data.packages && Array.isArray(data.packages) && data.packages.length > 0) {
           setPackages(data.packages);
           setPackageId(data.packages[0].id);
@@ -266,6 +266,40 @@ export default function ActivationPanelApp() {
     } catch (e) {
       console.error("Cloud delete error", e);
     }
+  };
+
+  // Helper to deduplicate history entries by username
+  const deduplicateLines = (lines: SavedLine[]): SavedLine[] => {
+    if (!Array.isArray(lines)) return [];
+    const map = new Map<string, SavedLine>();
+    lines.forEach((item) => {
+      if (!item || !item.username) return;
+      const key = item.username.trim().toLowerCase();
+      if (!map.has(key)) {
+        map.set(key, item);
+      } else {
+        const existing = map.get(key)!;
+        const timeExisting = existing.expireDate ? new Date(existing.expireDate).getTime() : 0;
+        const timeNew = item.expireDate ? new Date(item.expireDate).getTime() : 0;
+        if (timeNew >= timeExisting) {
+          map.set(key, item);
+        }
+      }
+    });
+    return Array.from(map.values());
+  };
+
+  // Helper to sort history entries so almost-expired ones are at the VERY TOP
+  const getSortedLines = (lines: SavedLine[]): SavedLine[] => {
+    const clean = deduplicateLines(lines);
+    return clean.sort((a, b) => {
+      const dateA = a.expireDate ? new Date(a.expireDate).getTime() : Infinity;
+      const dateB = b.expireDate ? new Date(b.expireDate).getTime() : Infinity;
+      if (dateA !== dateB) {
+        return dateA - dateB; // Ascending: earliest expiration date (or expired) first!
+      }
+      return (b.id || "").localeCompare(a.id || "");
+    });
   };
 
   const clearAllHistory = async () => {
@@ -431,10 +465,7 @@ export default function ActivationPanelApp() {
           renewBlock: actionType === "renew" ? formattedOutputs.renewBlock : (matchedLine?.renewBlock || ""),
         };
 
-        const filteredHistory = savedLines.filter(
-          (item) => item.username.toLowerCase() !== uName.toLowerCase()
-        );
-        const updatedHistory = [newRecord, ...filteredHistory];
+        const updatedHistory = getSortedLines([newRecord, ...filteredHistory]);
         setSavedLines(updatedHistory);
 
         // Post line to current user's Cloud Storage
@@ -559,11 +590,13 @@ Expire On: ${expireDateStr}
     setTimeout(() => setCopiedIndex(null), 2000);
   };
 
-  const filteredHistory = savedLines.filter(
-    (item) =>
-      item.username.toLowerCase().includes(historySearch.toLowerCase()) ||
-      item.note.toLowerCase().includes(historySearch.toLowerCase()) ||
-      item.userId.toLowerCase().includes(historySearch.toLowerCase())
+  const filteredHistory = getSortedLines(
+    savedLines.filter(
+      (item) =>
+        item.username.toLowerCase().includes(historySearch.toLowerCase()) ||
+        item.note.toLowerCase().includes(historySearch.toLowerCase()) ||
+        item.userId.toLowerCase().includes(historySearch.toLowerCase())
+    )
   );
 
   // Multi-User Login & Registration Lock Screen
@@ -879,12 +912,20 @@ Expire On: ${expireDateStr}
                         }}
                         className="w-full px-4 py-2.5 bg-emerald-950/40 border border-emerald-500/30 rounded-xl text-emerald-300 text-xs font-mono mb-1 focus:outline-none"
                       >
-                        <option value="">-- Quick Auto-fill from My History --</option>
-                        {savedLines.map((item) => (
-                          <option key={item.id} value={item.id}>
-                            👤 {item.username} ({item.note || "No Note"}) - Exp: {item.expireDate}
-                          </option>
-                        ))}
+                        <option value="">-- Select Line to Renew (Almost Expired First) --</option>
+                        {getSortedLines(savedLines).map((item) => {
+                          const expMs = item.expireDate ? new Date(item.expireDate).getTime() : 0;
+                          const now = Date.now();
+                          const isExpired = expMs < now;
+                          const isSoon = !isExpired && expMs - now < 15 * 86400000;
+                          const statusTag = isExpired ? "⚠️ EXPIRED" : isSoon ? "⏰ EXPIRING SOON" : "✅ ACTIVE";
+
+                          return (
+                            <option key={item.id} value={item.id}>
+                              [{statusTag}] 👤 {item.username} ({item.note || "No Note"}) - Exp: {item.expireDate || "N/A"}
+                            </option>
+                          );
+                        })}
                       </select>
                     )}
 
@@ -1121,7 +1162,7 @@ Expire On: ${expireDateStr}
                   className="p-5 bg-slate-900/70 rounded-2xl border border-white/10 flex flex-col gap-4 hover:border-purple-500/40 transition-all"
                 >
                   <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span
                         className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${
                           line.type === "new"
@@ -1131,6 +1172,31 @@ Expire On: ${expireDateStr}
                       >
                         {line.type === "new" ? "NEW LINE" : "RENEWED"}
                       </span>
+                      {(() => {
+                        const expMs = line.expireDate ? new Date(line.expireDate).getTime() : 0;
+                        const now = Date.now();
+                        const isExpired = expMs < now;
+                        const isSoon = !isExpired && expMs - now < 15 * 86400000;
+                        if (isExpired) {
+                          return (
+                            <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">
+                              ⚠️ EXPIRED
+                            </span>
+                          );
+                        }
+                        if (isSoon) {
+                          return (
+                            <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 animate-pulse">
+                              ⏰ EXPIRING SOON
+                            </span>
+                          );
+                        }
+                        return (
+                          <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            ✅ ACTIVE
+                          </span>
+                        );
+                      })()}
                       <span className="text-xs text-gray-400 font-mono">
                         User ID: <strong className="text-white">{line.userId}</strong>
                       </span>
@@ -1160,7 +1226,17 @@ Expire On: ${expireDateStr}
                     </div>
                     <div className="mt-1">
                       <span className="text-gray-500 block text-[10px]">EXPIRES ON</span>
-                      <span className="text-emerald-400 font-semibold">{line.expireDate}</span>
+                      <span
+                        className={`font-semibold ${
+                          (line.expireDate ? new Date(line.expireDate).getTime() : 0) < Date.now()
+                            ? "text-red-400 font-bold"
+                            : (line.expireDate ? new Date(line.expireDate).getTime() : 0) - Date.now() < 15 * 86400000
+                            ? "text-amber-400 font-bold"
+                            : "text-emerald-400"
+                        }`}
+                      >
+                        {line.expireDate || "N/A"}
+                      </span>
                     </div>
                   </div>
 
