@@ -29,19 +29,20 @@ function ensureUserFile(userId: string) {
 }
 
 // Read user isolated data
-async function getUserData(userId: string): Promise<{ uid: string; apiKey: string; packages: any[]; lines: any[] }> {
-  const defaultData = { uid: userId, apiKey: "", packages: [], lines: [] };
+async function getUserData(userId: string): Promise<{ uid: string; apiKey: string; packages: any[]; lines: any[]; brandDomain: string }> {
+  const defaultData = { uid: userId, apiKey: "", packages: [], lines: [], brandDomain: "yourhost.tld" };
   if (!userId) return defaultData;
 
   if (redis) {
     try {
-      const data = await redis.get<{ uid: string; apiKey: string; packages: any[]; lines: any[] }>(`user_db:${userId}`);
+      const data = await redis.get<{ uid: string; apiKey: string; packages: any[]; lines: any[]; brandDomain?: string }>(`user_db:${userId}`);
       if (data && typeof data === "object") {
         return {
           uid: userId,
           apiKey: data.apiKey || "",
           packages: Array.isArray(data.packages) ? data.packages : [],
           lines: Array.isArray(data.lines) ? data.lines : [],
+          brandDomain: data.brandDomain || "yourhost.tld",
         };
       }
     } catch (err) {
@@ -59,6 +60,7 @@ async function getUserData(userId: string): Promise<{ uid: string; apiKey: strin
       apiKey: parsed.apiKey || "",
       packages: Array.isArray(parsed.packages) ? parsed.packages : [],
       lines: Array.isArray(parsed.lines) ? parsed.lines : [],
+      brandDomain: parsed.brandDomain || "yourhost.tld",
     };
   } catch {
     return defaultData;
@@ -66,7 +68,7 @@ async function getUserData(userId: string): Promise<{ uid: string; apiKey: strin
 }
 
 // Save user isolated data
-async function saveUserData(userId: string, data: { apiKey?: string; packages?: any[]; lines?: any[] }): Promise<void> {
+async function saveUserData(userId: string, data: { apiKey?: string; packages?: any[]; lines?: any[]; brandDomain?: string }): Promise<void> {
   if (!userId) return;
   const current = await getUserData(userId);
   const updated = {
@@ -74,6 +76,7 @@ async function saveUserData(userId: string, data: { apiKey?: string; packages?: 
     apiKey: data.apiKey !== undefined ? data.apiKey : current.apiKey,
     packages: data.packages !== undefined ? data.packages : current.packages,
     lines: data.lines !== undefined ? data.lines : current.lines,
+    brandDomain: data.brandDomain !== undefined ? data.brandDomain : current.brandDomain,
   };
 
   if (redis) {
@@ -110,13 +113,14 @@ export async function GET(request: NextRequest) {
       apiKey: userData.apiKey,
       packages: userData.packages,
       lines: userData.lines,
+      brandDomain: userData.brandDomain,
     });
   }
 
   // Handle Multi-Tenant User Data Fetch
   if (action === "cloud_get") {
     const userData = await getUserData(userId);
-    return NextResponse.json({ lines: userData.lines, apiKey: userData.apiKey, packages: userData.packages });
+    return NextResponse.json({ lines: userData.lines, apiKey: userData.apiKey, packages: userData.packages, brandDomain: userData.brandDomain });
   }
 
   const apiKey = searchParams.get("api_key");
@@ -176,12 +180,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { action, line, id, apiKey, packages, userId } = body;
+    const { action, line, id, apiKey, packages, brandDomain, userId } = body;
     const uid = userId || "default_admin";
 
     if (action === "cloud_save_settings") {
-      await saveUserData(uid, { apiKey, packages });
-      return NextResponse.json({ status: "true", apiKey, packages });
+      await saveUserData(uid, { apiKey, packages, brandDomain });
+      return NextResponse.json({ status: "true", apiKey, packages, brandDomain });
     }
 
     if (action === "cloud_save" && line) {

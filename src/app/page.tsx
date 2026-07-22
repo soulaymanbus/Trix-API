@@ -68,6 +68,7 @@ export default function ActivationPanelApp() {
 
   // Core App State
   const [apiKey, setApiKey] = useState<string>("");
+  const [brandDomain, setBrandDomain] = useState<string>("yourhost.tld");
   const [packages, setPackages] = useState<CustomPackage[]>(DEFAULT_PACKAGES);
   const [actionType, setActionType] = useState<"new" | "renew">("new");
 
@@ -123,6 +124,11 @@ export default function ActivationPanelApp() {
         } else {
           setApiKey("");
         }
+        if (data.brandDomain) {
+          setBrandDomain(data.brandDomain);
+        } else {
+          setBrandDomain("yourhost.tld");
+        }
         if (data.packages && Array.isArray(data.packages) && data.packages.length > 0) {
           setPackages(data.packages);
           setPackageId(data.packages[0].id);
@@ -156,6 +162,7 @@ export default function ActivationPanelApp() {
         setCurrentUid(data.uid);
         setCurrentPassword(data.password);
         setApiKey(data.apiKey || "");
+        setBrandDomain(data.brandDomain || "yourhost.tld");
         setSavedLines(Array.isArray(data.lines) ? data.lines : []);
         if (data.packages && Array.isArray(data.packages) && data.packages.length > 0) {
           setPackages(data.packages);
@@ -190,8 +197,9 @@ export default function ActivationPanelApp() {
     sessionStorage.removeItem("trix_pass");
   };
 
-  const saveSettings = async (updatedApiKey: string, updatedPackages: CustomPackage[]) => {
+  const saveSettings = async (updatedApiKey: string, updatedPackages: CustomPackage[], updatedBrandDomain?: string) => {
     try {
+      const activeBrandDomain = updatedBrandDomain !== undefined ? updatedBrandDomain : brandDomain;
       await fetch("/api/activation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -199,6 +207,7 @@ export default function ActivationPanelApp() {
           action: "cloud_save_settings",
           apiKey: updatedApiKey,
           packages: updatedPackages,
+          brandDomain: activeBrandDomain,
           userId: currentUid,
         }),
       });
@@ -211,7 +220,12 @@ export default function ActivationPanelApp() {
 
   const handleApiKeySave = (val: string) => {
     setApiKey(val);
-    saveSettings(val, packages);
+    saveSettings(val, packages, brandDomain);
+  };
+
+  const handleBrandDomainSave = (val: string) => {
+    setBrandDomain(val);
+    saveSettings(apiKey, packages, val);
   };
 
   const handleAddPackage = (e: React.FormEvent) => {
@@ -225,7 +239,7 @@ export default function ActivationPanelApp() {
 
     setNewPkgName("");
     setNewPkgId("");
-    saveSettings(apiKey, updated);
+    saveSettings(apiKey, updated, brandDomain);
   };
 
   const handleDeletePackage = (id: string) => {
@@ -236,7 +250,7 @@ export default function ActivationPanelApp() {
     const updated = packages.filter((pkg) => pkg.id !== id);
     setPackages(updated);
     if (packageId === id) setPackageId(updated[0].id);
-    saveSettings(apiKey, updated);
+    saveSettings(apiKey, updated, brandDomain);
   };
 
   const deleteSavedLine = async (id: string) => {
@@ -271,15 +285,15 @@ export default function ActivationPanelApp() {
   };
 
   const extractCredentials = (urlStr?: string) => {
-    if (!urlStr) return { username: "f1625907a5", password: "88447205a5", host: "http://line.tvdoul.vip" };
+    if (!urlStr) return { username: "", password: "", host: `http://line.${brandDomain}` };
     try {
       const parsed = new URL(urlStr);
-      const u = parsed.searchParams.get("username") || "f1625907a5";
-      const p = parsed.searchParams.get("password") || "88447205a5";
+      const u = parsed.searchParams.get("username") || "";
+      const p = parsed.searchParams.get("password") || "";
       const h = `${parsed.protocol}//${parsed.host}`;
       return { username: u, password: p, host: h };
     } catch {
-      return { username: "f1625907a5", password: "88447205a5", host: "http://line.tvdoul.vip" };
+      return { username: "", password: "", host: `http://line.${brandDomain}` };
     }
   };
 
@@ -326,6 +340,11 @@ export default function ActivationPanelApp() {
         const creds = extractCredentials(resObj?.url);
         const uName = resObj?.username || creds.username || username;
         const pWord = resObj?.password || creds.password || password;
+        
+        // Update state parameters so UI inputs populate with created line details
+        if (uName) setUsername(uName);
+        if (pWord) setPassword(pWord);
+
         const uId = resObj?.user_id || `ID-${Math.floor(1000000 + Math.random() * 9000000)}`;
 
         const defaultExpire = new Date();
@@ -380,13 +399,19 @@ export default function ActivationPanelApp() {
   const formatOutputData = (
     data: any,
     act: "new" | "renew",
-    uName: string,
-    pWord: string,
-    uId: string,
-    expireDateStr: string
+    uNameParam?: string,
+    pWordParam?: string,
+    uIdParam?: string,
+    expireDateParam?: string
   ) => {
     const resObj = Array.isArray(data) ? data[0] : data;
     const isSuccess = resObj?.status === "true" || resObj?.status === true;
+
+    const creds = extractCredentials(resObj?.url);
+    const uName = resObj?.username || creds.username || uNameParam || username || "";
+    const pWord = resObj?.password || creds.password || pWordParam || password || "";
+    const uId = resObj?.user_id || uIdParam || `ID-${Math.floor(1000000 + Math.random() * 9000000)}`;
+    const expireDateStr = resObj?.expire || expireDateParam || new Date().toISOString().split("T")[0];
 
     if (act === "new") {
       const block1 = `✅ Add M3U successful
@@ -399,25 +424,25 @@ Expire On: ${expireDateStr}
 http://line.trxdnscloud.ru/get.php?username=${uName}&password=${pWord}&type=m3u_plus&output=ts
 
 🌍 Host:
-http://line.tvdoul.vip/get.php?username=${uName}&password=${pWord}&type=m3u_plus&output=ts
+http://line.${brandDomain}/get.php?username=${uName}&password=${pWord}&type=m3u_plus&output=ts
 
 🔒 VPN:
-http://vpn.tvdoul.vip/get.php?username=${uName}&password=${pWord}&type=m3u_plus&output=ts
+http://vpn.${brandDomain}/get.php?username=${uName}&password=${pWord}&type=m3u_plus&output=ts
 
 🇪🇸 Spain:
-http://es.tvdoul.vip/get.php?username=${uName}&password=${pWord}&type=m3u_plus&output=ts
+http://es.${brandDomain}/get.php?username=${uName}&password=${pWord}&type=m3u_plus&output=ts
 
 🇬🇷 Greece:
-http://gr.tvdoul.vip/get.php?username=${uName}&password=${pWord}&type=m3u_plus&output=ts
+http://gr.${brandDomain}/get.php?username=${uName}&password=${pWord}&type=m3u_plus&output=ts
 
 🇮🇹 Italy:
-http://it.tvdoul.vip/get.php?username=${uName}&password=${pWord}&type=m3u_plus&output=ts
+http://it.${brandDomain}/get.php?username=${uName}&password=${pWord}&type=m3u_plus&output=ts
 
 ---------
 ---------
 
 🧩 Xtream API:
-🌐 Host: http://line.tvdoul.vip
+🌐 Host: http://line.${brandDomain}
 👤 Username: ${uName}
 🔑 Password: ${pWord}
 
@@ -434,13 +459,13 @@ ${pWord}
 ------------------------------
 📺 M3U Link:
 
-http://line.tvdoul.vip/get.php?username=${uName}&password=${pWord}&type=m3u_plus&output=ts
+http://line.${brandDomain}/get.php?username=${uName}&password=${pWord}&type=m3u_plus&output=ts
 
 ---------
 ---------
 
 🧩 Xtream:
-🌐 Host: http://line.tvdoul.vip
+🌐 Host: http://line.${brandDomain}
 👤 Username: ${uName}
 🔑 Password: ${pWord}`;
 
@@ -451,8 +476,8 @@ http://line.tvdoul.vip/get.php?username=${uName}&password=${pWord}&type=m3u_plus
 User Id: ${uId}
 Expire On: ${expireDateStr}
 ------------------------------
-👤 Username: ${uName || username}
-🔑 Password: ${pWord || password}`;
+👤 Username: ${uName}
+🔑 Password: ${pWord}`;
 
       return { block1: "", block2: "", renewBlock };
     }
@@ -1131,13 +1156,13 @@ Expire On: ${expireDateStr}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Section 1: Reseller API Key */}
+            {/* Section 1: Reseller API Key & Brand Domain */}
             <div className="flex flex-col gap-4 bg-slate-900/60 p-6 rounded-2xl border border-white/10">
               <h3 className="text-sm font-bold text-amber-300 uppercase tracking-wider flex items-center gap-2">
-                <Key className="w-4 h-4 text-amber-400" /> Reseller API Key
+                <Key className="w-4 h-4 text-amber-400" /> API & Brand Settings
               </h3>
               <p className="text-xs text-gray-400">
-                Enter your unique Reseller API Key provided by Activation Panel. This key is stored securely in your user database.
+                Configure your Reseller API key and customized brand domain name.
               </p>
 
               <div className="flex flex-col gap-2 mt-2">
@@ -1148,6 +1173,17 @@ Expire On: ${expireDateStr}
                   onChange={(e) => handleApiKeySave(e.target.value)}
                   placeholder="Paste your Reseller API key here..."
                   className="w-full px-4 py-3 bg-slate-950/90 text-amber-300 text-sm font-mono rounded-xl border-2 border-amber-500/80 focus:outline-none api-key-highlight"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2 mt-2">
+                <label className="text-xs font-semibold text-gray-300">Brand Domain (for generated M3U links)</label>
+                <input
+                  type="text"
+                  value={brandDomain}
+                  onChange={(e) => handleBrandDomainSave(e.target.value)}
+                  placeholder="e.g. yourhost.tld"
+                  className="w-full px-4 py-3 bg-slate-950/90 text-amber-300 text-sm font-mono rounded-xl border border-white/10 focus:outline-none focus:border-amber-500"
                 />
               </div>
             </div>
