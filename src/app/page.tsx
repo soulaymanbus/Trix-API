@@ -603,42 +603,34 @@ Expire On: ${expireDateStr}
   if (!isAuthenticated) {
     return (
       <main className="min-h-screen flex items-center justify-center p-4">
-        <div className="glass-panel w-full max-w-md p-8 rounded-3xl border border-white/10 flex flex-col gap-6 shadow-2xl relative overflow-hidden">
-          <div className="absolute -top-12 -right-12 w-36 h-36 bg-blue-500/20 rounded-full blur-2xl pointer-events-none"></div>
-          
-          <div className="flex flex-col items-center text-center gap-3">
-            <div className="p-4 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl shadow-lg shadow-blue-500/30 text-white">
-              <UserPlus className="w-8 h-8" />
+        <div className="panel-card w-full max-w-sm p-7 rounded-2xl border border-slate-800 flex flex-col gap-6 shadow-xl">
+          <div className="flex flex-col items-center text-center gap-2.5">
+            <div className="w-12 h-12 bg-slate-800/90 text-slate-200 rounded-xl border border-slate-700 flex items-center justify-center">
+              <Lock className="w-6 h-6" />
             </div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">Multi-User Activation Panel</h1>
-            <p className="text-xs text-gray-400">
-              Enter any password to sign in or create a brand new isolated user account!
+            <h1 className="text-xl font-semibold text-slate-100 tracking-tight">Activation Panel Workspace</h1>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Enter your password to access or auto-create your isolated user workspace.
             </p>
           </div>
 
           <form onSubmit={handleLogin} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-gray-300 uppercase tracking-wider flex items-center justify-between">
-                <span>Account Password</span>
-                <span className="text-[10px] text-blue-400 font-normal">Creates account automatically</span>
+              <label className="text-xs font-medium text-slate-300">
+                Password
               </label>
-              <div className="relative">
-                <input
-                  type="password"
-                  value={adminPassInput}
-                  onChange={(e) => setAdminPassInput(e.target.value)}
-                  placeholder="Enter or create password..."
-                  className="w-full px-4 py-3 bg-slate-900/90 text-white rounded-xl border border-white/10 focus:outline-none focus:border-blue-500 text-sm font-mono"
-                  autoFocus
-                />
-              </div>
-              <p className="text-[11px] text-gray-400 mt-1">
-                💡 Entering a new password creates a separate isolated UID with your own API Key & settings.
-              </p>
+              <input
+                type="password"
+                value={adminPassInput}
+                onChange={(e) => setAdminPassInput(e.target.value)}
+                placeholder="Enter password..."
+                className="w-full px-3.5 py-2.5 bg-[#05070D] text-slate-100 rounded-xl border border-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-xs font-mono"
+                autoFocus
+              />
             </div>
 
             {authError && (
-              <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-xs flex items-center gap-2">
+              <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-xs flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{authError}</span>
               </div>
@@ -647,10 +639,10 @@ Expire On: ${expireDateStr}
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-blue-500/25 transition-all active:scale-95 flex items-center justify-center gap-2"
+              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
             >
-              {loading ? <RefreshCw className="w-5 h-5 animate-spin" /> : <ShieldCheck className="w-5 h-5" />}
-              <span>Sign In / Create Account</span>
+              {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+              <span>Sign In / Access Workspace</span>
             </button>
           </form>
         </div>
@@ -670,180 +662,160 @@ Expire On: ${expireDateStr}
     : null;
 
   return (
-    <main className="min-h-screen p-4 sm:p-8 max-w-6xl mx-auto flex flex-col gap-8">
+    <main className="min-h-screen p-4 sm:p-6 max-w-6xl mx-auto flex flex-col gap-6">
       {/* Header Bar */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 glass-panel p-6 rounded-2xl border border-white/10">
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 panel-card p-5 rounded-2xl border border-slate-800/90">
         <div className="flex items-center gap-3">
-          <div className="p-3 bg-blue-600/20 text-blue-400 rounded-xl border border-blue-500/30">
-            <Tv className="w-8 h-8" />
+          <div className="w-10 h-10 bg-indigo-600/10 text-indigo-400 rounded-xl border border-indigo-500/20 flex items-center justify-center">
+            <Tv className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-              Activation Panel Manager
-              <span className="px-2.5 py-0.5 text-xs bg-purple-500/20 text-purple-300 rounded-full border border-purple-500/30 font-mono">
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-semibold text-slate-100 tracking-tight">Activation Panel</h1>
+              <span className="px-2 py-0.5 text-[11px] bg-slate-800/80 text-slate-300 rounded-md border border-slate-700 font-mono">
                 UID: {currentUid}
               </span>
-            </h1>
-            <p className="text-xs text-gray-400 mt-1 flex items-center gap-1.5">
-              <User className="w-3.5 h-3.5 text-emerald-400" /> Account: <strong className="text-white">{currentPassword}</strong> (Isolated Cloud Database)
+            </div>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Isolated Reseller Account Workspace
             </p>
           </div>
         </div>
 
-        {/* User Account Controls */}
-        <div className="flex items-center gap-3">
+        {/* Header Action Controls */}
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setActiveTab("settings")}
-            className={`px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 border transition-all ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5 border transition-all ${
               activeTab === "settings"
-                ? "bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-lg shadow-amber-500/10"
-                : "bg-slate-900/60 text-gray-300 border-white/10 hover:border-white/20"
+                ? "bg-slate-800 text-white border-slate-700"
+                : "bg-slate-900/60 text-slate-300 border-slate-800 hover:border-slate-700"
             }`}
           >
-            <Settings className="w-4 h-4 text-amber-400" /> Settings & API
+            <Settings className="w-3.5 h-3.5 text-slate-400" /> Settings
           </button>
 
           <button
             onClick={handleLogout}
             title="Logout User Account"
-            className="px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 rounded-xl transition-all font-medium text-xs flex items-center gap-2"
+            className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-slate-200 rounded-xl transition-all font-medium text-xs flex items-center gap-1.5"
           >
-            <LogOut className="w-4 h-4" /> Switch Account
+            <LogOut className="w-3.5 h-3.5" /> Sign Out
           </button>
         </div>
       </header>
 
       {/* Navigation Tabs */}
-      <div className="flex items-center gap-3 border-b border-white/10 pb-3">
+      <div className="bg-[#0B0F19] p-1 rounded-xl border border-slate-800/80 inline-flex items-center gap-1 self-start">
         <button
           onClick={() => setActiveTab("create")}
-          className={`px-5 py-2.5 rounded-xl font-medium text-sm flex items-center gap-2 transition-all ${
+          className={`px-4 py-2 rounded-lg text-xs font-medium flex items-center gap-2 transition-all ${
             activeTab === "create"
-              ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
-              : "bg-slate-900/40 text-gray-400 hover:text-white border border-white/5"
+              ? "bg-slate-800 text-white border border-slate-700/60 shadow-sm"
+              : "text-slate-400 hover:text-slate-200"
           }`}
         >
-          <Zap className="w-4 h-4" /> Create & Renew Lines
+          <Zap className="w-3.5 h-3.5 text-indigo-400" /> Create & Renew Lines
         </button>
 
         <button
           onClick={() => setActiveTab("history")}
-          className={`px-5 py-2.5 rounded-xl font-medium text-sm flex items-center gap-2 transition-all ${
+          className={`px-4 py-2 rounded-lg text-xs font-medium flex items-center gap-2 transition-all ${
             activeTab === "history"
-              ? "bg-purple-600 text-white shadow-lg shadow-purple-500/20"
-              : "bg-slate-900/40 text-gray-400 hover:text-white border border-white/5"
+              ? "bg-slate-800 text-white border border-slate-700/60 shadow-sm"
+              : "text-slate-400 hover:text-slate-200"
           }`}
         >
-          <History className="w-4 h-4" />
-          My Saved Lines
-          <span className="ml-1 px-2 py-0.5 text-xs bg-white/20 rounded-full font-mono">
+          <History className="w-3.5 h-3.5 text-purple-400" />
+          Saved History
+          <span className="px-1.5 py-0.5 text-[10px] bg-slate-900 text-slate-400 rounded border border-slate-800 font-mono">
             {savedLines.length}
           </span>
         </button>
 
         <button
           onClick={() => setActiveTab("settings")}
-          className={`px-5 py-2.5 rounded-xl font-medium text-sm flex items-center gap-2 transition-all ${
+          className={`px-4 py-2 rounded-lg text-xs font-medium flex items-center gap-2 transition-all ${
             activeTab === "settings"
-              ? "bg-amber-600 text-white shadow-lg shadow-amber-500/20"
-              : "bg-slate-900/40 text-gray-400 hover:text-white border border-white/5"
+              ? "bg-slate-800 text-white border border-slate-700/60 shadow-sm"
+              : "text-slate-400 hover:text-slate-200"
           }`}
         >
-          <Settings className="w-4 h-4 text-amber-300" />
-          Settings
+          <Settings className="w-3.5 h-3.5 text-amber-400" /> Settings
         </button>
       </div>
 
       {/* TAB 1: CREATE & RENEW LINES */}
       {activeTab === "create" && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Form Controls Column */}
           <div className="lg:col-span-5 flex flex-col gap-6">
-            <div className="glass-panel p-6 rounded-2xl flex flex-col gap-6">
-              <h2 className="text-lg font-semibold text-gray-200 flex items-center gap-2 border-b border-white/10 pb-3">
-                <Zap className="w-5 h-5 text-blue-400" />
-                1. Choose Action
-              </h2>
+            <div className="panel-card p-6 rounded-2xl flex flex-col gap-5 border border-slate-800/90">
+              <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+                <h2 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-indigo-400" /> Subscription Action
+                </h2>
+              </div>
 
-              {/* Action Radio Boxes */}
-              <div className="grid grid-cols-2 gap-4">
-                <label
-                  className={`flex items-center justify-center gap-2 p-4 rounded-xl cursor-pointer border transition-all ${
-                    actionType === "new"
-                      ? "bg-blue-600/20 border-blue-500 text-white font-medium shadow-lg shadow-blue-500/10"
-                      : "bg-slate-900/40 border-white/10 text-gray-400 hover:border-white/20"
-                  }`}
+              {/* Action Segmented Toggle */}
+              <div className="bg-[#05070D] p-1 rounded-xl border border-slate-800 grid grid-cols-2 gap-1">
+                <button
+                  type="button"
                   onClick={() => {
                     setActionType("new");
                     if (duration !== "99") setDuration("99");
                   }}
-                >
-                  <input
-                    type="radio"
-                    name="actionType"
-                    value="new"
-                    checked={actionType === "new"}
-                    onChange={() => {
-                      setActionType("new");
-                      if (duration !== "99") setDuration("99");
-                    }}
-                    className="hidden"
-                  />
-                  <PlusCircle className={`w-5 h-5 ${actionType === "new" ? "text-blue-400" : "text-gray-500"}`} />
-                  <span>New Subscription</span>
-                </label>
-
-                <label
-                  className={`flex items-center justify-center gap-2 p-4 rounded-xl cursor-pointer border transition-all ${
-                    actionType === "renew"
-                      ? "bg-emerald-600/20 border-emerald-500 text-white font-medium shadow-lg shadow-emerald-500/10"
-                      : "bg-slate-900/40 border-white/10 text-gray-400 hover:border-white/20"
+                  className={`py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
+                    actionType === "new"
+                      ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/40 shadow-sm"
+                      : "text-slate-400 hover:text-slate-200"
                   }`}
+                >
+                  <PlusCircle className="w-3.5 h-3.5" /> New Line
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => {
                     setActionType("renew");
                     if (duration === "99") setDuration("12");
                   }}
+                  className={`py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
+                    actionType === "renew"
+                      ? "bg-emerald-600/20 text-emerald-300 border border-emerald-500/40 shadow-sm"
+                      : "text-slate-400 hover:text-slate-200"
+                  }`}
                 >
-                  <input
-                    type="radio"
-                    name="actionType"
-                    value="renew"
-                    checked={actionType === "renew"}
-                    onChange={() => {
-                      setActionType("renew");
-                      if (duration === "99") setDuration("12");
-                    }}
-                    className="hidden"
-                  />
-                  <RefreshCw className={`w-5 h-5 ${actionType === "renew" ? "text-emerald-400" : "text-gray-500"}`} />
-                  <span>Renew Line</span>
-                </label>
+                  <RefreshCw className="w-3.5 h-3.5" /> Renew Line
+                </button>
               </div>
 
-              <h2 className="text-lg font-semibold text-gray-200 flex items-center gap-2 border-b border-white/10 pb-3 pt-2">
-                <FileText className="w-5 h-5 text-indigo-400" />
-                2. Input Parameters
-              </h2>
+              <div className="flex items-center justify-between border-b border-slate-800/80 pb-2 pt-1">
+                <h2 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-slate-400" /> Line Parameters
+                </h2>
+              </div>
 
               {/* NEW FORM INPUTS */}
               {actionType === "new" && (
-                <div className="flex flex-col gap-5 animate-in fade-in duration-300">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-gray-300 flex items-center justify-between">
-                      <span>Package Selection</span>
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-medium text-slate-300">
+                        Package Bouquet
+                      </label>
                       <button
+                        type="button"
                         onClick={() => setActiveTab("settings")}
-                        className="text-[10px] text-amber-400 hover:underline flex items-center gap-1"
+                        className="text-[11px] text-indigo-400 hover:underline flex items-center gap-1"
                       >
-                        <Settings className="w-3 h-3" /> Manage Packages
+                        <Settings className="w-3 h-3" /> Manage
                       </button>
-                    </label>
-
-                    {/* Packages Dropdown / Selector from Settings */}
+                    </div>
                     <select
                       value={packageId}
                       onChange={(e) => setPackageId(e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-900/80 border border-white/10 rounded-xl text-white font-medium focus:outline-none focus:border-blue-500"
+                      className="w-full px-3.5 py-2.5 bg-[#05070D] border border-slate-800 rounded-xl text-slate-100 text-xs font-medium focus:outline-none focus:border-indigo-500"
                     >
                       {packages.map((pkg) => (
                         <option key={pkg.id} value={pkg.id}>
@@ -853,14 +825,14 @@ Expire On: ${expireDateStr}
                     </select>
                   </div>
 
-                  <div className="flex flex-col gap-2">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-gray-300 flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-blue-400" /> Duration (Months)
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-slate-400" /> Duration
                     </label>
                     <select
                       value={duration}
                       onChange={(e) => setDuration(e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-900/80 border border-white/10 rounded-xl text-white font-medium focus:outline-none focus:border-blue-500"
+                      className="w-full px-3.5 py-2.5 bg-[#05070D] border border-slate-800 rounded-xl text-slate-100 text-xs font-medium focus:outline-none focus:border-indigo-500"
                     >
                       <option value="99">Demo (1 Ticket) - Default</option>
                       <option value="1">1 Month</option>
@@ -870,16 +842,16 @@ Expire On: ${expireDateStr}
                     </select>
                   </div>
 
-                  <div className="flex flex-col gap-2">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-gray-300">
-                      Note / Customer Name
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-slate-300">
+                      Customer Note
                     </label>
                     <input
                       type="text"
                       value={note}
                       onChange={(e) => setNote(e.target.value)}
                       placeholder="e.g. Tomy"
-                      className="w-full px-4 py-3 bg-slate-900/80 border border-white/10 rounded-xl text-white focus:outline-none focus:border-blue-500"
+                      className="w-full px-3.5 py-2.5 bg-[#05070D] border border-slate-800 rounded-xl text-slate-100 text-xs focus:outline-none focus:border-indigo-500"
                     />
                   </div>
                 </div>
@@ -887,17 +859,12 @@ Expire On: ${expireDateStr}
 
               {/* RENEW FORM INPUTS */}
               {actionType === "renew" && (
-                <div className="flex flex-col gap-5 animate-in fade-in duration-300">
-                  <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-1.5">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs font-semibold uppercase tracking-wider text-gray-300 flex items-center gap-1.5">
-                        <UserCheck className="w-3.5 h-3.5 text-emerald-400" /> Username
+                      <label className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
+                        <UserCheck className="w-3.5 h-3.5 text-emerald-400" /> Select User / Enter Username
                       </label>
-                      {savedLines.length > 0 && (
-                        <span className="text-[11px] text-emerald-400 font-mono">
-                          {savedLines.length} Saved User{savedLines.length > 1 ? "s" : ""}
-                        </span>
-                      )}
                     </div>
 
                     {/* Saved Users Quick Selector */}
@@ -910,9 +877,9 @@ Expire On: ${expireDateStr}
                             setPassword(selected.password || "");
                           }
                         }}
-                        className="w-full px-4 py-2.5 bg-emerald-950/40 border border-emerald-500/30 rounded-xl text-emerald-300 text-xs font-mono mb-1 focus:outline-none"
+                        className="w-full px-3.5 py-2.5 bg-[#05070D] border border-slate-800 rounded-xl text-emerald-400 text-xs font-mono mb-1 focus:outline-none focus:border-emerald-500"
                       >
-                        <option value="">-- Select Line to Renew (Almost Expired First) --</option>
+                        <option value="">-- Quick Select (Almost Expired First) --</option>
                         {getSortedLines(savedLines).map((item) => {
                           const expMs = item.expireDate ? new Date(item.expireDate).getTime() : 0;
                           const now = Date.now();
@@ -933,32 +900,32 @@ Expire On: ${expireDateStr}
                       type="text"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      placeholder="Enter Username (e.g. f1625907a5)"
-                      className="w-full px-4 py-3 bg-slate-900/80 border border-white/10 rounded-xl text-white font-mono focus:outline-none focus:border-emerald-500"
+                      placeholder="Username (e.g. f1625907a5)"
+                      className="w-full px-3.5 py-2.5 bg-[#05070D] border border-slate-800 rounded-xl text-slate-100 text-xs font-mono focus:outline-none focus:border-emerald-500"
                     />
                   </div>
 
-                  <div className="flex flex-col gap-2">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-gray-300">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-slate-300">
                       Password
                     </label>
                     <input
                       type="text"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter Password (e.g. 88447205a5)"
-                      className="w-full px-4 py-3 bg-slate-900/80 border border-white/10 rounded-xl text-white font-mono focus:outline-none focus:border-emerald-500"
+                      placeholder="Password (e.g. 88447205a5)"
+                      className="w-full px-3.5 py-2.5 bg-[#05070D] border border-slate-800 rounded-xl text-slate-100 text-xs font-mono focus:outline-none focus:border-emerald-500"
                     />
                   </div>
 
-                  <div className="flex flex-col gap-2">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-gray-300 flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-emerald-400" /> Duration (Months)
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-slate-400" /> Renewal Duration
                     </label>
                     <select
                       value={duration}
                       onChange={(e) => setDuration(e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-900/80 border border-white/10 rounded-xl text-white font-medium focus:outline-none focus:border-emerald-500"
+                      className="w-full px-3.5 py-2.5 bg-[#05070D] border border-slate-800 rounded-xl text-slate-100 text-xs font-medium focus:outline-none focus:border-emerald-500"
                     >
                       <option value="1">1 Month</option>
                       <option value="3">3 Months</option>
@@ -970,8 +937,8 @@ Expire On: ${expireDateStr}
               )}
 
               {errorMsg && (
-                <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-300 text-sm flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-xs flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                   <div>{errorMsg}</div>
                 </div>
               )}
@@ -979,20 +946,20 @@ Expire On: ${expireDateStr}
               <button
                 onClick={handleExecute}
                 disabled={loading}
-                className={`w-full py-4 rounded-xl text-white font-bold text-base shadow-xl flex items-center justify-center gap-2 transition-all transform active:scale-95 ${
+                className={`w-full py-3 rounded-xl text-white font-medium text-xs shadow-sm flex items-center justify-center gap-2 transition-colors ${
                   actionType === "new"
-                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-blue-500/25"
-                    : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-emerald-500/25"
+                    ? "bg-indigo-600 hover:bg-indigo-500"
+                    : "bg-emerald-600 hover:bg-emerald-500"
                 } ${loading ? "opacity-60 cursor-not-allowed" : ""}`}
               >
                 {loading ? (
                   <>
-                    <RefreshCw className="w-5 h-5 animate-spin" /> Processing...
+                    <RefreshCw className="w-4 h-4 animate-spin" /> Processing...
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-5 h-5" />
-                    {actionType === "new" ? "Create New Subscription" : "Renew Subscription"}
+                    <Zap className="w-4 h-4" />
+                    {actionType === "new" ? "Create Subscription" : "Execute Renewal"}
                   </>
                 )}
               </button>
@@ -1001,75 +968,74 @@ Expire On: ${expireDateStr}
 
           {/* Formatted Outputs Column */}
           <div className="lg:col-span-7 flex flex-col gap-6">
-            <div className="glass-panel p-6 rounded-2xl flex flex-col gap-6 h-full">
-              <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                <h2 className="text-lg font-semibold text-gray-200 flex items-center gap-2">
-                  <Code2 className="w-5 h-5 text-purple-400" />
-                  Formatted Output Blocks
+            <div className="panel-card p-6 rounded-2xl flex flex-col gap-5 border border-slate-800/90 h-full">
+              <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+                <h2 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                  <Code2 className="w-4 h-4 text-indigo-400" /> Generated Output Blocks
                 </h2>
-                <span className="text-xs text-gray-400 font-mono">Saved to UID: {currentUid}</span>
+                <span className="text-xs text-slate-400 font-mono">UID: {currentUid}</span>
               </div>
 
               {!currentFormattedOutput ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center text-gray-500 gap-3 border-2 border-dashed border-white/10 rounded-2xl my-auto">
-                  <Globe className="w-12 h-12 text-gray-600 animate-pulse" />
+                <div className="flex flex-col items-center justify-center py-20 text-center text-slate-500 gap-2 border border-dashed border-slate-800 rounded-xl my-auto">
+                  <Globe className="w-8 h-8 text-slate-700" />
                   <div>
-                    <p className="text-gray-400 font-medium">Ready to generate output</p>
-                    <p className="text-xs text-gray-500 mt-1 max-w-xs">
-                      Select your parameters and click submit to trigger API & output details.
+                    <p className="text-slate-300 font-medium text-xs">Ready for generation</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Submit parameters to view output links & credentials.
                     </p>
                   </div>
                 </div>
               ) : (
-                <div className="flex flex-col gap-6 animate-in fade-in duration-300">
+                <div className="flex flex-col gap-5">
                   {actionType === "new" && (
                     <>
                       <div className="flex flex-col gap-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold uppercase tracking-wider text-blue-400 flex items-center gap-1.5">
-                            <FileText className="w-3.5 h-3.5" /> Block 1 (Full Servers & Details)
+                          <span className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
+                            <FileText className="w-3.5 h-3.5 text-indigo-400" /> Block 1 (Full M3U Links & Credentials)
                           </span>
                           <button
                             onClick={() => copyToClipboard(currentFormattedOutput.block1, "block1")}
-                            className="px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-lg text-xs font-medium border border-blue-500/30 flex items-center gap-1.5 transition-all"
+                            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition-colors"
                           >
                             {copiedIndex === "block1" ? (
                               <>
-                                <Check className="w-3.5 h-3.5 text-emerald-400" /> Copied!
+                                <Check className="w-3.5 h-3.5 text-emerald-400" /> Copied
                               </>
                             ) : (
                               <>
-                                <Copy className="w-3.5 h-3.5" /> Copy Block 1
+                                <Copy className="w-3.5 h-3.5 text-slate-400" /> Copy Block 1
                               </>
                             )}
                           </button>
                         </div>
-                        <pre className="p-4 bg-slate-950/90 text-green-400 rounded-xl text-xs font-mono border border-white/10 overflow-x-auto whitespace-pre-wrap leading-relaxed custom-scrollbar max-h-80 select-all">
+                        <pre className="p-4 bg-[#04060A] text-slate-200 rounded-xl text-xs font-mono border border-slate-800/80 overflow-x-auto whitespace-pre-wrap leading-relaxed custom-scrollbar max-h-80 select-all">
                           {currentFormattedOutput.block1}
                         </pre>
                       </div>
 
                       <div className="flex flex-col gap-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold uppercase tracking-wider text-purple-400 flex items-center gap-1.5">
-                            <FileText className="w-3.5 h-3.5" /> Block 2 (Compact Xtream & M3U)
+                          <span className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
+                            <FileText className="w-3.5 h-3.5 text-slate-400" /> Block 2 (Compact Xtream & M3U)
                           </span>
                           <button
                             onClick={() => copyToClipboard(currentFormattedOutput.block2, "block2")}
-                            className="px-3 py-1.5 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 rounded-lg text-xs font-medium border border-purple-500/30 flex items-center gap-1.5 transition-all"
+                            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition-colors"
                           >
                             {copiedIndex === "block2" ? (
                               <>
-                                <Check className="w-3.5 h-3.5 text-emerald-400" /> Copied!
+                                <Check className="w-3.5 h-3.5 text-emerald-400" /> Copied
                               </>
                             ) : (
                               <>
-                                <Copy className="w-3.5 h-3.5" /> Copy Block 2
+                                <Copy className="w-3.5 h-3.5 text-slate-400" /> Copy Block 2
                               </>
                             )}
                           </button>
                         </div>
-                        <pre className="p-4 bg-slate-950/90 text-purple-300 rounded-xl text-xs font-mono border border-white/10 overflow-x-auto whitespace-pre-wrap leading-relaxed custom-scrollbar max-h-64 select-all">
+                        <pre className="p-4 bg-[#04060A] text-slate-200 rounded-xl text-xs font-mono border border-slate-800/80 overflow-x-auto whitespace-pre-wrap leading-relaxed custom-scrollbar max-h-64 select-all">
                           {currentFormattedOutput.block2}
                         </pre>
                       </div>
@@ -1079,25 +1045,25 @@ Expire On: ${expireDateStr}
                   {actionType === "renew" && (
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-                          <RefreshCw className="w-3.5 h-3.5" /> Renew Output Block
+                        <span className="text-xs font-medium text-emerald-400 flex items-center gap-1.5">
+                          <RefreshCw className="w-3.5 h-3.5" /> Renewal Output Summary
                         </span>
                         <button
                           onClick={() => copyToClipboard(currentFormattedOutput.renewBlock, "renew")}
-                          className="px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 rounded-lg text-xs font-medium border border-emerald-500/30 flex items-center gap-1.5 transition-all"
+                          className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition-colors"
                         >
                           {copiedIndex === "renew" ? (
                             <>
-                              <Check className="w-3.5 h-3.5 text-emerald-400" /> Copied!
+                              <Check className="w-3.5 h-3.5 text-emerald-400" /> Copied
                             </>
                           ) : (
                             <>
-                              <Copy className="w-3.5 h-3.5" /> Copy Renew Text
+                              <Copy className="w-3.5 h-3.5 text-slate-400" /> Copy Summary
                             </>
                           )}
                         </button>
                       </div>
-                      <pre className="p-4 bg-slate-950/90 text-emerald-300 rounded-xl text-xs font-mono border border-white/10 overflow-x-auto whitespace-pre-wrap leading-relaxed custom-scrollbar max-h-80 select-all">
+                      <pre className="p-4 bg-[#04060A] text-emerald-400 rounded-xl text-xs font-mono border border-slate-800/80 overflow-x-auto whitespace-pre-wrap leading-relaxed custom-scrollbar max-h-80 select-all">
                         {currentFormattedOutput.renewBlock}
                       </pre>
                     </div>
@@ -1111,47 +1077,47 @@ Expire On: ${expireDateStr}
 
       {/* TAB 2: SAVED HISTORY LINES */}
       {activeTab === "history" && (
-        <div className="glass-panel p-6 rounded-2xl flex flex-col gap-6 animate-in fade-in duration-300">
-          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 border-b border-white/10 pb-4">
+        <div className="panel-card p-6 rounded-2xl flex flex-col gap-6 border border-slate-800/90">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
             <div>
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <History className="w-5 h-5 text-purple-400" />
-                My Saved Lines History
+              <h2 className="text-base font-semibold text-slate-100 flex items-center gap-2">
+                <History className="w-4 h-4 text-purple-400" />
+                Saved Subscriptions History
               </h2>
-              <p className="text-xs text-gray-400 mt-0.5">
-                Isolated database for user UID: <strong className="text-purple-300 font-mono">{currentUid}</strong>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Workspace records for UID: <span className="text-slate-200 font-mono">{currentUid}</span>
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="relative flex-1 md:w-64">
-                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+            <div className="flex items-center gap-2.5">
+              <div className="relative flex-1 sm:w-64">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
                 <input
                   type="text"
                   value={historySearch}
                   onChange={(e) => setHistorySearch(e.target.value)}
                   placeholder="Search username, note..."
-                  className="w-full pl-9 pr-4 py-2 bg-slate-900/80 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-purple-500"
+                  className="w-full pl-8 pr-3 py-1.5 bg-[#05070D] border border-slate-800 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-indigo-500 font-mono"
                 />
               </div>
 
               {savedLines.length > 0 && (
                 <button
                   onClick={clearAllHistory}
-                  className="px-3.5 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all"
+                  className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-xl text-xs font-medium flex items-center gap-1.5 transition-colors"
                 >
-                  <Trash2 className="w-4 h-4" /> Clear History
+                  <Trash2 className="w-3.5 h-3.5" /> Clear History
                 </button>
               )}
             </div>
           </div>
 
           {filteredHistory.length === 0 ? (
-            <div className="py-16 text-center text-gray-500 flex flex-col items-center justify-center gap-2">
-              <FileText className="w-10 h-10 text-gray-600" />
-              <p className="text-sm font-medium">No saved lines found for your user account</p>
-              <p className="text-xs text-gray-500">
-                Subscriptions you generate will be saved specifically under your isolated UID.
+            <div className="py-16 text-center text-slate-500 flex flex-col items-center justify-center gap-2">
+              <FileText className="w-8 h-8 text-slate-700" />
+              <p className="text-xs font-medium text-slate-400">No saved lines found</p>
+              <p className="text-[11px] text-slate-500">
+                Generated lines are saved under your current workspace UID.
               </p>
             </div>
           ) : (
@@ -1159,15 +1125,15 @@ Expire On: ${expireDateStr}
               {filteredHistory.map((line) => (
                 <div
                   key={line.id}
-                  className="p-5 bg-slate-900/70 rounded-2xl border border-white/10 flex flex-col gap-4 hover:border-purple-500/40 transition-all"
+                  className="p-4 bg-[#0B0F19] rounded-xl border border-slate-800/90 flex flex-col gap-3.5 hover:border-slate-700 transition-colors"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span
-                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${
+                        className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider ${
                           line.type === "new"
-                            ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                            : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                            ? "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"
+                            : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
                         }`}
                       >
                         {line.type === "new" ? "NEW LINE" : "RENEWED"}
@@ -1179,59 +1145,59 @@ Expire On: ${expireDateStr}
                         const isSoon = !isExpired && expMs - now < 15 * 86400000;
                         if (isExpired) {
                           return (
-                            <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20">
                               ⚠️ EXPIRED
                             </span>
                           );
                         }
                         if (isSoon) {
                           return (
-                            <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 animate-pulse">
-                              ⏰ EXPIRING SOON
+                            <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                              ⏰ SOON
                             </span>
                           );
                         }
                         return (
-                          <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                             ✅ ACTIVE
                           </span>
                         );
                       })()}
-                      <span className="text-xs text-gray-400 font-mono">
-                        User ID: <strong className="text-white">{line.userId}</strong>
+                      <span className="text-[11px] text-slate-400 font-mono">
+                        ID: <strong className="text-slate-200">{line.userId}</strong>
                       </span>
                     </div>
 
                     <button
                       onClick={() => deleteSavedLine(line.id)}
-                      className="p-1.5 text-gray-500 hover:text-red-400 transition-colors"
+                      className="p-1 text-slate-500 hover:text-rose-400 transition-colors"
                       title="Delete record"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-xs bg-slate-950/60 p-3 rounded-xl border border-white/5 font-mono">
+                  <div className="grid grid-cols-2 gap-2 text-xs bg-[#05070D] p-3 rounded-lg border border-slate-800/80 font-mono">
                     <div>
-                      <span className="text-gray-500 block text-[10px]">USERNAME</span>
-                      <span className="text-amber-300 font-semibold">{line.username}</span>
+                      <span className="text-slate-500 block text-[10px]">USERNAME</span>
+                      <span className="text-indigo-300 font-medium">{line.username}</span>
                     </div>
                     <div>
-                      <span className="text-gray-500 block text-[10px]">PASSWORD</span>
-                      <span className="text-amber-300 font-semibold">{line.password || "N/A"}</span>
+                      <span className="text-slate-500 block text-[10px]">PASSWORD</span>
+                      <span className="text-indigo-300 font-medium">{line.password || "N/A"}</span>
                     </div>
                     <div className="mt-1">
-                      <span className="text-gray-500 block text-[10px]">NOTE</span>
-                      <span className="text-gray-300">{line.note}</span>
+                      <span className="text-slate-500 block text-[10px]">NOTE</span>
+                      <span className="text-slate-300">{line.note}</span>
                     </div>
                     <div className="mt-1">
-                      <span className="text-gray-500 block text-[10px]">EXPIRES ON</span>
+                      <span className="text-slate-500 block text-[10px]">EXPIRES ON</span>
                       <span
                         className={`font-semibold ${
                           (line.expireDate ? new Date(line.expireDate).getTime() : 0) < Date.now()
-                            ? "text-red-400 font-bold"
+                            ? "text-rose-400"
                             : (line.expireDate ? new Date(line.expireDate).getTime() : 0) - Date.now() < 15 * 86400000
-                            ? "text-amber-400 font-bold"
+                            ? "text-amber-400 font-medium"
                             : "text-emerald-400"
                         }`}
                       >
@@ -1240,12 +1206,12 @@ Expire On: ${expireDateStr}
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between text-[11px] text-gray-500 pt-1 border-t border-white/5">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5 text-gray-400" /> {line.createdTime}
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-800/80">
+                    <span className="flex items-center gap-1 font-mono text-[10px]">
+                      <Calendar className="w-3 h-3 text-slate-500" /> {line.createdTime}
                     </span>
 
-                    <div className="flex items-center gap-2 flex-wrap justify-end">
+                    <div className="flex items-center gap-1.5 flex-wrap justify-end">
                       <button
                         onClick={() => {
                           setActionType("renew");
@@ -1253,36 +1219,36 @@ Expire On: ${expireDateStr}
                           setPassword(line.password || "");
                           setActiveTab("create");
                         }}
-                        className="px-2.5 py-1 bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 font-semibold rounded border border-emerald-500/40 flex items-center gap-1 transition-all"
+                        className="px-2.5 py-1 bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 font-medium rounded border border-emerald-500/30 flex items-center gap-1 transition-colors text-[11px]"
                         title="Renew this user"
                       >
-                        <RefreshCw className="w-3 h-3" /> Quick Renew
+                        <RefreshCw className="w-3 h-3" /> Renew
                       </button>
 
                       {line.block1 && (
                         <button
                           onClick={() => copyToClipboard(line.block1!, `hist_b1_${line.id}`)}
-                          className="px-2.5 py-1 bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 rounded border border-blue-500/30 flex items-center gap-1 transition-all"
+                          className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 text-[11px]"
                         >
-                          {copiedIndex === `hist_b1_${line.id}` ? "Copied B1!" : "Copy B1"}
+                          {copiedIndex === `hist_b1_${line.id}` ? "Copied" : "Copy B1"}
                         </button>
                       )}
 
                       {line.block2 && (
                         <button
                           onClick={() => copyToClipboard(line.block2!, `hist_b2_${line.id}`)}
-                          className="px-2.5 py-1 bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 rounded border border-purple-500/30 flex items-center gap-1 transition-all"
+                          className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 text-[11px]"
                         >
-                          {copiedIndex === `hist_b2_${line.id}` ? "Copied B2!" : "Copy B2"}
+                          {copiedIndex === `hist_b2_${line.id}` ? "Copied" : "Copy B2"}
                         </button>
                       )}
 
                       {line.renewBlock && (
                         <button
                           onClick={() => copyToClipboard(line.renewBlock!, `hist_rn_${line.id}`)}
-                          className="px-2.5 py-1 bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 rounded border border-emerald-500/30 flex items-center gap-1 transition-all"
+                          className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 text-[11px]"
                         >
-                          {copiedIndex === `hist_rn_${line.id}` ? "Copied Renew!" : "Copy Renew"}
+                          {copiedIndex === `hist_rn_${line.id}` ? "Copied" : "Copy Summary"}
                         </button>
                       )}
                     </div>
@@ -1296,117 +1262,117 @@ Expire On: ${expireDateStr}
 
       {/* TAB 3: SETTINGS PAGE */}
       {activeTab === "settings" && (
-        <div className="glass-panel p-6 sm:p-8 rounded-2xl flex flex-col gap-8 animate-in fade-in duration-300">
-          <div className="flex items-center justify-between border-b border-white/10 pb-4">
+        <div className="panel-card p-6 sm:p-8 rounded-2xl flex flex-col gap-6 border border-slate-800/90">
+          <div className="flex items-center justify-between border-b border-slate-800/80 pb-4">
             <div>
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <Settings className="w-5 h-5 text-amber-400" />
-                Account Settings & API Configuration
+              <h2 className="text-base font-semibold text-slate-100 flex items-center gap-2">
+                <Settings className="w-4 h-4 text-slate-400" />
+                Settings & Integration API
               </h2>
-              <p className="text-xs text-gray-400 mt-0.5">
-                Manage your Reseller API key and IPTV package list for account UID: <strong className="text-amber-300 font-mono">{currentUid}</strong>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Configuration for user workspace UID: <span className="text-slate-200 font-mono">{currentUid}</span>
               </p>
             </div>
 
             {settingsSuccess && (
-              <div className="px-3.5 py-1.5 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 rounded-xl text-xs font-semibold flex items-center gap-1.5">
-                <Check className="w-4 h-4" /> {settingsSuccess}
+              <div className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg text-xs font-medium flex items-center gap-1.5">
+                <Check className="w-3.5 h-3.5" /> {settingsSuccess}
               </div>
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Section 1: Reseller API Key & Brand Domain */}
-            <div className="flex flex-col gap-4 bg-slate-900/60 p-6 rounded-2xl border border-white/10">
-              <h3 className="text-sm font-bold text-amber-300 uppercase tracking-wider flex items-center gap-2">
-                <Key className="w-4 h-4 text-amber-400" /> API & Brand Settings
+            <div className="flex flex-col gap-4 bg-[#0B0F19] p-5 rounded-xl border border-slate-800/80">
+              <h3 className="text-xs font-semibold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                <Key className="w-3.5 h-3.5 text-indigo-400" /> Reseller API & Brand Settings
               </h3>
-              <p className="text-xs text-gray-400">
-                Configure your Reseller API key and customized brand domain name.
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Configure your unique Reseller API Key string and default M3U brand domain name.
               </p>
 
-              <div className="flex flex-col gap-2 mt-2">
-                <label className="text-xs font-semibold text-gray-300">API Key String</label>
+              <div className="flex flex-col gap-1.5 mt-1">
+                <label className="text-xs font-medium text-slate-300">API Key String</label>
                 <input
                   type="text"
                   value={apiKey}
                   onChange={(e) => handleApiKeySave(e.target.value)}
-                  placeholder="Paste your Reseller API key here..."
-                  className="w-full px-4 py-3 bg-slate-950/90 text-amber-300 text-sm font-mono rounded-xl border-2 border-amber-500/80 focus:outline-none api-key-highlight"
+                  placeholder="Paste Reseller API Key..."
+                  className="w-full px-3.5 py-2.5 bg-[#05070D] text-indigo-300 text-xs font-mono rounded-xl border border-slate-800 focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
-              <div className="flex flex-col gap-2 mt-2">
-                <label className="text-xs font-semibold text-gray-300">Brand Domain (for generated M3U links)</label>
+              <div className="flex flex-col gap-1.5 mt-1">
+                <label className="text-xs font-medium text-slate-300">Brand Domain (for generated M3U links)</label>
                 <input
                   type="text"
                   value={brandDomain}
                   onChange={(e) => handleBrandDomainSave(e.target.value)}
                   placeholder="e.g. yourhost.tld"
-                  className="w-full px-4 py-3 bg-slate-950/90 text-amber-300 text-sm font-mono rounded-xl border border-white/10 focus:outline-none focus:border-amber-500"
+                  className="w-full px-3.5 py-2.5 bg-[#05070D] text-slate-100 text-xs font-mono rounded-xl border border-slate-800 focus:outline-none focus:border-indigo-500"
                 />
               </div>
             </div>
 
             {/* Section 2: Manage Packages & IDs */}
-            <div className="flex flex-col gap-4 bg-slate-900/60 p-6 rounded-2xl border border-white/10">
-              <h3 className="text-sm font-bold text-purple-300 uppercase tracking-wider flex items-center gap-2">
-                <Package className="w-4 h-4 text-purple-400" /> IPTV Packages & Bouquet IDs
+            <div className="flex flex-col gap-4 bg-[#0B0F19] p-5 rounded-xl border border-slate-800/80">
+              <h3 className="text-xs font-semibold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                <Package className="w-3.5 h-3.5 text-purple-400" /> IPTV Packages & Bouquet IDs
               </h3>
-              <p className="text-xs text-gray-400">
-                Add, edit or delete your IPTV package names and bouquet IDs (e.g. Adult: 32615, No Adult: 32614).
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Customize package names and bouquet IDs (e.g. Adult: 32615, No Adult: 32614).
               </p>
 
               {/* Package List */}
-              <div className="flex flex-col gap-2 my-2">
+              <div className="flex flex-col gap-2 my-1">
                 {packages.map((pkg) => (
                   <div
                     key={pkg.id}
-                    className="flex items-center justify-between p-3 bg-slate-950/80 rounded-xl border border-white/5 font-mono text-xs"
+                    className="flex items-center justify-between p-2.5 bg-[#05070D] rounded-xl border border-slate-800/80 font-mono text-xs"
                   >
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold text-white">{pkg.name}</span>
-                      <span className="px-2 py-0.5 bg-purple-500/20 text-purple-300 rounded border border-purple-500/30">
+                      <span className="font-medium text-slate-200">{pkg.name}</span>
+                      <span className="px-2 py-0.5 bg-slate-800 text-slate-400 rounded text-[11px]">
                         ID: {pkg.id}
                       </span>
                     </div>
 
                     <button
                       onClick={() => handleDeletePackage(pkg.id)}
-                      className="p-1 text-gray-500 hover:text-red-400 transition-colors"
+                      className="p-1 text-slate-500 hover:text-rose-400 transition-colors"
                       title="Remove package"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 ))}
               </div>
 
               {/* Add New Package Form */}
-              <form onSubmit={handleAddPackage} className="flex flex-col gap-3 pt-3 border-t border-white/10">
-                <span className="text-xs font-semibold text-gray-300">Add New Custom Package</span>
+              <form onSubmit={handleAddPackage} className="flex flex-col gap-3 pt-3 border-t border-slate-800/80">
+                <span className="text-xs font-medium text-slate-300">Add Package Preset</span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <input
                     type="text"
                     value={newPkgName}
                     onChange={(e) => setNewPkgName(e.target.value)}
                     placeholder="Package Name (e.g. Sports)"
-                    className="px-3 py-2 bg-slate-950/90 text-xs text-white rounded-xl border border-white/10 focus:outline-none focus:border-purple-500"
+                    className="px-3 py-2 bg-[#05070D] text-xs text-slate-100 rounded-xl border border-slate-800 focus:outline-none focus:border-indigo-500"
                   />
                   <input
                     type="text"
                     value={newPkgId}
                     onChange={(e) => setNewPkgId(e.target.value)}
                     placeholder="Bouquet ID (e.g. 32616)"
-                    className="px-3 py-2 bg-slate-950/90 text-xs text-white rounded-xl border border-white/10 focus:outline-none focus:border-purple-500 font-mono"
+                    className="px-3 py-2 bg-[#05070D] text-xs text-slate-100 rounded-xl border border-slate-800 focus:outline-none focus:border-indigo-500 font-mono"
                   />
                 </div>
 
                 <button
                   type="submit"
-                  className="py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shadow-md"
+                  className="py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm"
                 >
-                  <Plus className="w-4 h-4" /> Add Package
+                  <Plus className="w-3.5 h-3.5" /> Add Custom Package
                 </button>
               </form>
             </div>
